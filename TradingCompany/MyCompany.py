@@ -9,6 +9,6 @@ class MyCompany(TradingCompany):
 if __name__ == '__main__':
     specifications_builder = environment.get_specification_builder(environment_files_path="../resources")
     fleet = fleets.example_fleet_1()
-    specifications_builder.add_company(MyCompany.Data(MyCompany, fleet, "My Shipping Corp Ltd."))
+    specifications_builder.add_company(MyCompany.Data(MyCompany, fleet, "Chris' Super Shipping Corp Plc."))
     sim = environment.generate_simulation(specifications_builder)
     sim.run()

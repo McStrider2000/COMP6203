@@ -9,3 +9,4 @@
 3. Creates new company using our MyCompany class
 4. Builds sim
 5. runs sim
+6. This should create a load of csv, pkl, json files that aren't tracked in git
