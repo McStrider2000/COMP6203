@@ -10,3 +10,4 @@
 4. Builds sim
 5. runs sim
 6. This should create a load of csv, pkl, json files that aren't tracked in git
+7. To view details use "mable overview metrics_<number>.json" - DO NOT include python -m
