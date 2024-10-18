@@ -24,3 +24,8 @@ Fleet:
             - unloading consumption
         - Name
         - Keep journey log
+
+Company:
+    - Name
+    - Trades
+    -
