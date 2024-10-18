@@ -1,0 +1,26 @@
+Fleet:
+    - VesselWithEngine
+        - Cargo
+            - Capacity
+            - Type
+            - Loading Rate
+        - Speed
+        - Engine
+            - fuel
+                - name
+                - price
+                - energy coefficient
+                - co2 coefficient
+            - idle consumption rate
+            - laden consumption rate
+                - base
+                - speed_power ?
+                - factor
+            - ballast consumption rate
+                - base
+                - speed_power ?
+                - factor
+            - loading consumption
+            - unloading consumption
+        - Name
+        - Keep journey log

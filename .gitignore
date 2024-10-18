@@ -1,0 +1,5 @@
+.idea
+TradingCompany/*.json
+TradingCompany/*.csv
+TradingCompany/*.pkl
+TradingCompany/*.pickle
