@@ -17,6 +17,8 @@ class MyCompany(TradingCompany):
             curr_schedule = vessel.schedule
             for trade in trades:
                 if trade not in scheduled_trades:
+                    # TODO: Improve cost estimation to run on each possible schedule route
+                    # TODO: Do we choose shortest or cheapest?
                     cost = self.estimate_cost(curr_schedule, trade, vessel)
                     shortest_schedule = self.find_shortest_schedule(curr_schedule.copy(), trade)
                     if shortest_schedule is not None:
