@@ -1,3 +1,5 @@
+import sys
+
 from mable.cargo_bidding import TradingCompany
 from mable.transport_operation import ScheduleProposal
 from mable.examples import environment, fleets
@@ -8,18 +10,28 @@ class MyCompany(TradingCompany):
         schedules = {}
         costs = {}
         scheduled_trades = []
+
         for vessel in self.fleet:
             curr_schedule = vessel.schedule
             for trade in trades:
-                # if trade not in scheduled_trades:
-                copied = curr_schedule.copy()
-                copied.add_transportation(trade)
-                is_valid = copied.verify_schedule()
-                if is_valid:
-                    curr_schedule = copied
-                    scheduled_trades.append(trade)
+                if trade not in scheduled_trades:
+                    new_schedule = curr_schedule.copy()
+                    insertion_points = new_schedule.get_insertion_points()
+                    shortest_schedule = None
+                    for i in range(len(insertion_points)):
+                        idx_pick_up = insertion_points[i]
+                        possible_drop_offs = insertion_points[i:]
+                        for j in range(len(possible_drop_offs)):
+                            idx_drop_off = possible_drop_offs[j]
+                            schedule_option = new_schedule.copy()
+                            schedule_option.add_transportation(trade, idx_pick_up, idx_drop_off)
+                            if shortest_schedule is None or schedule_option.completion_time() < shortest_schedule.completion_time():
+                                if schedule_option.verify_schedule():
+                                    shortest_schedule = schedule_option
+                    if shortest_schedule is not None:
+                        curr_schedule = new_schedule
+                        scheduled_trades.append(trade)
             schedules[vessel] = curr_schedule
-
         return ScheduleProposal(schedules, scheduled_trades)
 
 if __name__ == '__main__':

@@ -28,4 +28,27 @@ Fleet:
 Company:
     - Name
     - Trades
-    -
+    - market interface:
+        - pre_inform - receive details of future trades
+        - inform - Response detailing our bids and schedules
+        - receive - what auctions we won
+
+ Trade:
+  - Origin port
+    - Name
+    - Coordinates
+  - Destination port
+    - Name
+    - Coordinates
+  - amount - how much cargo
+  - cargo_type - will always be 'Oil'
+  - Timings
+    - Earliest pick up
+    - Latest pick up
+    - Earliest drop off
+    - Latest drop off
+    - Status and Prob - not used, ignore
+
+Schedule:
+    - Plan of operations for a vessel
+        - eg [Pickup trade1, dropoff trade1, pickup trade2, dropoff trade2]
