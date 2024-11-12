@@ -41,24 +41,73 @@ class MyCompany(TradingCompany):
             i = 0
             trade_options = {}
             while i < len(trades):
+                new_schedule = current_vessel_schedule.copy()
                 current_trade = trades[i]
                 new_schedule.add_transportation(current_trade)
                 if new_schedule.verify_schedule():
-                    total_cost = self.predict_cost(current_vessel, current_trade)
+                    total_cost = self.estimate_cost(None, current_trade, current_vessel)
                     # TODO Find the closest future trade
                     # trade_options[current_trade] = ...
-                    pass
+                    closest_future_trade, distance = self.calculate_closest_future_trade(current_trade, self._future_trades)
+                    if closest_future_trade is not None:
+                        trade_options[current_trade] = {
+                        'cost': total_cost,
+                        'min_distance_to_future': distance,
+                        'closest_future_trade': closest_future_trade
+                    }
+                    
                 i += 1
             if len(trade_options) > 0:
-                # TODO Select a trade
-                pass
+                selected_trade = min(
+                    trade_options.keys(),
+                    key=lambda trade: trade_options[trade]['min_distance_to_future']
+                )
+
+                new_schedule = current_vessel_schedule.copy()
+                new_schedule.add_transportation(selected_trade)
+                scheduled_trades.append(selected_trade)
+                schedules[current_vessel] = new_schedule
+                costs[selected_trade] = trade_options[selected_trade]['cost']
+
+
             j += 1
         return ScheduleProposal(schedules, scheduled_trades, costs)
 
-    def predict_cost(self, vessel, trade):
-        total_cost = 0
-        return total_cost
 
+    def calculate_closest_future_trade(self, trade, future_trades):
+        min_distance = float('inf')
+        closest_future_trade = None
+
+        if self._future_trades is not None:
+            for future_trade in future_trades:
+                distance=self.headquarters.get_network_distance(trade.destination_port, future_trade.origin_port)
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_future_trade = future_trade
+
+        return (closest_future_trade, min_distance)
+
+    
+
+
+    def estimate_cost(self, schedule, trade, vessel):
+        hq = self.headquarters
+        pick_up_travel_cost = self.calculate_travel_cost(hq, vessel, vessel.location, trade.origin_port)
+        time_to_load = vessel.get_loading_time(trade.cargo_type, trade.amount)
+        loading_cost = vessel.get_loading_consumption(time_to_load)
+        drop_off_travel_cost = self.calculate_travel_cost(hq, vessel, trade.origin_port, trade.destination_port)
+        unloading_cost = vessel.get_unloading_consumption(time_to_load)
+
+        return pick_up_travel_cost + loading_cost + drop_off_travel_cost + unloading_cost
+
+    @staticmethod
+    def calculate_travel_cost(hq, vessel, location_a, location_b, is_laden = False):
+        distance_to_pickup = hq.get_network_distance(location_a, location_b)
+        time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
+        if is_laden:
+            return vessel.get_laden_consumption(time_to_pick_up, vessel.speed)
+        else:
+            return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
     def find_schedules(self, trades):
         schedules = {}
         scheduled_trades = []

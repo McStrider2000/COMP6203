@@ -70,8 +70,27 @@ class MyCompany(TradingCompany):
 
     def find_competing_vessels(self, trade):
         competing_vessels = {}
-        # TODO add competing vessels
-        # competing_vessels[<a company>] = <a vessel>
+        all_companies = [company for company in self.headquarters.get_companies() 
+                        if company.name != self.name]
+        
+        for company in all_companies:
+            print(f"Company: {company.name}")
+            closest_vessel = None
+            min_distance = float('inf')
+            
+            for vessel in company._fleet:
+                distance = self.headquarters.get_network_distance(
+                    vessel.location, 
+                    trade.origin_port
+                )
+                
+                if distance < min_distance:
+                    min_distance = distance
+                    closest_vessel = vessel
+            
+            if closest_vessel is not None:
+                competing_vessels[company] = closest_vessel
+
         return competing_vessels
 
 
