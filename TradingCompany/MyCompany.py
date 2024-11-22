@@ -1,13 +1,44 @@
 import sys
 
 from mable.cargo_bidding import TradingCompany
-from mable.transport_operation import ScheduleProposal
+from mable.transport_operation import ScheduleProposal, Bid
 from mable.examples import environment, fleets
 import itertools
 
 from pandas.core.config_init import pc_width_doc
 
 class MyCompany(TradingCompany):
+
+    def __init__(self, fleet, name):
+        super().__init__(fleet, name)
+        self._future_trades = None
+
+    def pre_inform(self, trades, time):
+        self._future_trades = trades
+
+    def inform(self, trades, *args, **kwargs):
+        proposed_scheduling = self.propose_schedules(trades)
+        scheduled_trades = proposed_scheduling.scheduled_trades
+        self._current_scheduling_proposal = proposed_scheduling
+        trades_and_costs = [
+            (x, proposed_scheduling.costs[x]) if x in proposed_scheduling.costs
+            else (x, 0)
+            for x in scheduled_trades]
+        bids = [Bid(amount=cost, trade=one_trade) for one_trade, cost in trades_and_costs]
+        self._future_trades = None
+        return bids
+
+
+    def receive(self, contracts, auction_ledger=None, *args, **kwargs):
+        trades = [one_contract.trade for one_contract in contracts]
+        scheduling_proposal = self.find_schedules(trades)
+        rejected_trades = self.apply_schedules(scheduling_proposal.schedules)
+
+    def find_schedules(self, trades):
+        scheduleProposal = self.propose_schedules(trades)
+
+        return ScheduleProposal(scheduleProposal.schedules, scheduleProposal.scheduled_trades, {})
+
     def propose_schedules(self, trades):
         schedules = {}
         costs = {}
@@ -24,6 +55,7 @@ class MyCompany(TradingCompany):
                     if shortest_schedule is not None:
                         curr_schedule = shortest_schedule
                         scheduled_trades.append(trade)
+                        costs[trade] = cost
             schedules[vessel] = curr_schedule
         return ScheduleProposal(schedules, scheduled_trades, costs)
 
