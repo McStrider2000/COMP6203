@@ -1,20 +1,18 @@
-import sys
-
 from mable.cargo_bidding import TradingCompany
 from mable.transport_operation import ScheduleProposal, Bid
 from mable.examples import environment, fleets
-import itertools
-
-from pandas.core.config_init import pc_width_doc
+from Price import BidPredictor
 
 class MyCompany(TradingCompany):
 
     def __init__(self, fleet, name):
         super().__init__(fleet, name)
         self._future_trades = None
+        self._bid_predictor = BidPredictor(self.headquarters)
 
     def pre_inform(self, trades, time):
         self._future_trades = trades
+        self._bid_predictor.pre_inform(self.headquarters, time)
 
     def inform(self, trades, *args, **kwargs):
         proposed_scheduling = self.propose_schedules(trades)
@@ -33,6 +31,8 @@ class MyCompany(TradingCompany):
         trades = [one_contract.trade for one_contract in contracts]
         scheduling_proposal = self.find_schedules(trades)
         rejected_trades = self.apply_schedules(scheduling_proposal.schedules)
+
+        self._bid_predictor.recieve(contracts, auction_ledger)
 
     def find_schedules(self, trades):
         scheduleProposal = self.propose_schedules(trades)
@@ -58,7 +58,7 @@ class MyCompany(TradingCompany):
             if shortest_schedule is not None:
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = shortest_schedule
-                costs[trade] = self.estimate_cost(trade, chosen_vessel)
+                costs[trade] = self._bid_predictor.estimate_fulfilment_cost(chosen_vessel, trade)
 
         return ScheduleProposal(schedules, scheduled_trades, costs)
 
@@ -77,24 +77,6 @@ class MyCompany(TradingCompany):
                     if schedule_option.verify_schedule():
                         shortest_schedule = schedule_option
         return shortest_schedule
-
-    def estimate_cost(self, trade, vessel):
-        pick_up_travel_cost = self.calculate_travel_cost(vessel, vessel.location, trade.origin_port)
-        time_to_load = vessel.get_loading_time(trade.cargo_type, trade.amount)
-        loading_cost = vessel.get_loading_consumption(time_to_load)
-        drop_off_travel_cost = self.calculate_travel_cost(vessel, trade.origin_port, trade.destination_port)
-        unloading_cost = vessel.get_unloading_consumption(time_to_load)
-
-        return pick_up_travel_cost + loading_cost + drop_off_travel_cost + unloading_cost
-
-    def calculate_travel_cost(self, vessel, location_a, location_b, is_laden = False):
-        distance_to_pickup = self.headquarters.get_network_distance(location_a, location_b)
-        time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
-        if is_laden:
-            return vessel.get_laden_consumption(time_to_pick_up, vessel.speed)
-        else:
-            return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
-
 
 if __name__ == '__main__':
     specifications_builder = environment.get_specification_builder(environment_files_path="../resources", trades_per_occurrence=2)
