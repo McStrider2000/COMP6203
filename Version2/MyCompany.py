@@ -1,10 +1,8 @@
 import sys
+from typing import Optional, Tuple
 
 from mable.cargo_bidding import TradingCompany
-from mable.competition.information import CompanyHeadquarters
-from mable.shipping_market import Trade
-from mable.simulation_space import Port
-from mable.transport_operation import ScheduleProposal, Bid
+from mable.transport_operation import ScheduleProposal, Bid, Trade
 from mable.examples import environment, fleets, companies
 from mable.transportation_scheduling import Schedule
 from dataclasses import dataclass
@@ -575,12 +573,17 @@ class MyCompany(TradingCompany):
             return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
 
 
+    @property
+    def future_trades(self):
+        return self._future_trades
+
 def build_specification():
     number_of_month = 12
     trades_per_auction = 6
-    specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
-                                                                   trades_per_occurrence=trades_per_auction,
-                                                                   num_auctions=number_of_month)
+    specifications_builder = environment.get_specification_builder(
+        environment_files_path="../resources",
+        trades_per_occurrence=trades_per_auction,
+        num_auctions=number_of_month)
     my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
     specifications_builder.add_company(MyCompany.Data(MyCompany, my_fleet, MyCompany.__name__))
     for vessel in my_fleet:
