@@ -1,7 +1,8 @@
 import sys
+from typing import Optional, Tuple
 
 from mable.cargo_bidding import TradingCompany
-from mable.transport_operation import ScheduleProposal, Bid
+from mable.transport_operation import ScheduleProposal, Bid, Trade
 from mable.examples import environment, fleets, companies
 import itertools
 
@@ -45,22 +46,42 @@ class MyCompany(TradingCompany):
         scheduled_trades = []
 
         for trade in trades:
-            chosen_vessel = None
-            shortest_schedule = None
-            for vessel in self.fleet:
-                curr_schedule = schedules.get(vessel, vessel.schedule)
-                if trade not in scheduled_trades:
-                    vessel_shortest_schedule = self.find_shortest_schedule(curr_schedule.copy(), trade)
-                    if vessel_shortest_schedule is not None:
-                        if (shortest_schedule is None) or (vessel_shortest_schedule.completion_time() < shortest_schedule.completion_time()):
-                            shortest_schedule = vessel_shortest_schedule
-                            chosen_vessel = vessel
-            if shortest_schedule is not None:
-                scheduled_trades.append(trade)
-                schedules[chosen_vessel] = shortest_schedule
-                costs[trade] = self.estimate_cost(trade, chosen_vessel)
+            trade_options = {}
+            closest_trade, min_distance = self.find_closest_trade(trade, self.future_trades)
+            print(closest_trade, min_distance)
+            sys.exit(1)
+            # chosen_vessel = None
+            # shortest_schedule = None
+            # for vessel in self.fleet:
+            #     curr_schedule = schedules.get(vessel, vessel.schedule)
+            #     if trade not in scheduled_trades:
+            #         vessel_shortest_schedule = self.find_shortest_schedule(curr_schedule.copy(), trade)
+            #         if vessel_shortest_schedule is not None:
+            #             if (shortest_schedule is None) or (vessel_shortest_schedule.completion_time() < shortest_schedule.completion_time()):
+            #                 shortest_schedule = vessel_shortest_schedule
+            #                 chosen_vessel = vessel
+            # if shortest_schedule is not None:
+            #     scheduled_trades.append(trade)
+            #     schedules[chosen_vessel] = shortest_schedule
+            #     costs[trade] = self.estimate_cost(trade, chosen_vessel)
 
         return ScheduleProposal(schedules, scheduled_trades, costs)
+
+    def find_closest_trade(self, trade : Trade, future_trades : list[Trade]) -> Tuple[Optional[Trade], float]:
+        if not future_trades:
+            return None, float('inf')
+
+        closest_future_trade = min(
+            future_trades,
+            key=lambda future_trade: self.headquarters.get_network_distance(
+                trade.destination_port, future_trade.origin_port
+            )
+        )
+
+        distance = self.headquarters.get_network_distance(trade.destination_port, closest_future_trade.origin_port)
+
+        return closest_future_trade, distance
+
 
     @staticmethod
     def find_shortest_schedule(schedule, trade):
@@ -96,10 +117,15 @@ class MyCompany(TradingCompany):
             return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
 
 
+    @property
+    def future_trades(self):
+        return self._future_trades
+
 def build_specification():
     number_of_month = 12
     trades_per_auction = 5
     specifications_builder = environment.get_specification_builder(
+        environment_files_path="../resources",
         trades_per_occurrence=trades_per_auction,
         num_auctions=number_of_month)
     my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
