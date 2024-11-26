@@ -79,13 +79,14 @@ class MyCompany(TradingCompany):
 
 
     def propose_schedules(self, trades):
+        print("first shedule",self.fleet[0].schedule)
         
-        if len(trades) <= 2:
-            return self._propose_greedy_schedules(trades)
+        if len(trades) <= 10:
+            return self._propose_brute_schedules(trades)
         
         return self._propose_genetic_schedules(trades)
     
-    def _propose_greedy_schedules(self, trades):
+    def _propose_brute_schedules(self, trades):
         schedules = {}
         scheduled_trades = []
         costs = {}
@@ -104,7 +105,7 @@ class MyCompany(TradingCompany):
             if shortest_schedule is not None:
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = shortest_schedule
-                costs[trade] = self.estimate_cost(trade, chosen_vessel)
+                costs[trade] = self.estimate_fulfilment_cost(chosen_vessel, trade)
 
         return ScheduleProposal(schedules, scheduled_trades, costs)
 
@@ -163,7 +164,7 @@ class MyCompany(TradingCompany):
 
     def _evaluate_chromosome(self, chromosome: List) -> GeneticScheduleResult:
         """Evaluate a single chromosome (trade ordering) using greedy approach"""
-        schedule_proposal = self._propose_greedy_schedules(chromosome)
+        schedule_proposal = self._propose_brute_schedules(chromosome)
         
         completion_time = max(schedule.completion_time() 
                             for schedule in schedule_proposal.schedules.values()) if schedule_proposal.schedules else float('inf')
@@ -236,19 +237,32 @@ class MyCompany(TradingCompany):
                         shortest_schedule = schedule_option
         return shortest_schedule
 
-    def estimate_cost(self, trade, vessel):
-        pick_up_travel_cost = self.calculate_travel_cost(vessel, vessel.location, trade.origin_port)
+    def estimate_fulfilment_cost(self, vessel, trade) -> float:
+        """ 
+        Calculate the cost of fulfilling a trade given a vessel.
+        Assumes that the vessel is ballast when traveling to the origin port.
+        Args:
+          vessel (VesselWithEngine): The vessel to fulfill the trade with.
+          trade (Trade): The trade to fulfill.
+        Returns:
+          Prediction: The predicted cost of fulfilling the trade. Always 100% confident.
+        """
+        # Calculate total fuel consumption
         time_to_load = vessel.get_loading_time(trade.cargo_type, trade.amount)
-        loading_cost = vessel.get_loading_consumption(time_to_load)
-        drop_off_travel_cost = self.calculate_travel_cost(vessel, trade.origin_port, trade.destination_port)
-        unloading_cost = vessel.get_unloading_consumption(time_to_load)
+        pick_up_travel_fuel = self.calculate_travel_consumption(
+            vessel, vessel.location, trade.origin_port, False)
+        loading_fuel = vessel.get_loading_consumption(time_to_load)
+        drop_off_travel_fuel = self.calculate_travel_consumption(
+            vessel, trade.origin_port, trade.destination_port, True)
+        unloading_fuel = vessel.get_unloading_consumption(time_to_load)
 
-        return pick_up_travel_cost + loading_cost + drop_off_travel_cost + unloading_cost
-
-    def calculate_travel_cost(self, vessel, location_a, location_b, is_laden = False):
+        # Return total cost of fuel
+        return vessel.get_cost(pick_up_travel_fuel + loading_fuel + drop_off_travel_fuel + unloading_fuel)
+	
+    def calculate_travel_consumption(self, vessel, location_a, location_b, if_laden=False):
         distance_to_pickup = self.headquarters.get_network_distance(location_a, location_b)
         time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
-        if is_laden:
+        if if_laden:
             return vessel.get_laden_consumption(time_to_pick_up, vessel.speed)
         else:
             return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
