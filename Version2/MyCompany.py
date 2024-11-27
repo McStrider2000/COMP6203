@@ -139,6 +139,8 @@ class MyCompany(TradingCompany):
                         tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
 
                         closest_trade, future_distance = self.find_closest_trade(trade, self._future_trades, self.headquarters)
+                        print(tradesToIdxs)
+                        sys.exit(1)
                         possible_future_schedule, possible_start, possible_end = self.find_shortest_schedule(vessel_schedule.copy(), closest_trade)
                         future_estimation = self.estimate_fulfilment_cost(vessel, closest_trade)
 
