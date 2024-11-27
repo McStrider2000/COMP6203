@@ -167,63 +167,35 @@ class BruteScheduleGenerator(CostEstimator):
         return time_to_pick_up
 
     def get_ports_around_insertion(self, schedule, vessel, idx_both):
-        # Get unique ports (only START nodes)
-        schedule_locations = schedule._get_node_locations()
-        schedule_locations = [schedule_locations[i]
-                              for i in range(0, len(schedule_locations), 2)]
-
-        # Get maximum insertion point
+        schedule_locations = self._get_schedule_locations(schedule)
         max_insertion = max(schedule.get_insertion_points())
-
-        # Special case: idx_both is 1 (beginning of schedule)
+        
         if idx_both == 1:
-            left_port = vessel.location
-            right_port = schedule_locations[0] if schedule_locations else None
-
-        # Special case: idx_both is max insertion point
+            return vessel.location, schedule_locations[0] if schedule_locations else None
         elif idx_both == max_insertion:
-            left_port = schedule_locations[-1] if schedule_locations else vessel.location
-            right_port = None
-
-        # Normal case: somewhere in middle of schedule
+            return schedule_locations[-1] if schedule_locations else vessel.location, None
         else:
-            left_idx = idx_both - 2  # -2 because indices in schedule_locations are shifted
+            left_idx = idx_both - 2
             right_idx = idx_both - 1
-            left_port = schedule_locations[left_idx]
-            right_port = schedule_locations[right_idx]
-
-        return left_port, right_port
+            return schedule_locations[left_idx], schedule_locations[right_idx]
 
     def get_ports_around_insertion_pair(self, schedule: Schedule, vessel: VesselWithEngine, idx_pickup, idx_dropoff):
-        # Get unique ports (only START nodes)
-        schedule_locations = schedule._get_node_locations()
-        schedule_locations = [schedule_locations[i]
-                              for i in range(0, len(schedule_locations), 2)]
-
-        # Get maximum insertion point
+        schedule_locations = self._get_schedule_locations(schedule)
         max_insertion = max(schedule.get_insertion_points())
+        
+        pickup_ports = self._get_insertion_ports(schedule_locations, vessel, idx_pickup, max_insertion)
+        dropoff_ports = self._get_insertion_ports(schedule_locations, vessel, idx_dropoff, max_insertion)
+        
+        return pickup_ports + dropoff_ports
 
-        # Handle pickup points
-        if idx_pickup == 1:
-            pickup_left = vessel.location
-            pickup_right = schedule_locations[0] if schedule_locations else None
-        elif idx_pickup == max_insertion:
-            pickup_left = schedule_locations[-1] if schedule_locations else vessel.location
-            pickup_right = None
+    def _get_schedule_locations(self, schedule: Schedule):
+        locations = schedule._get_node_locations()
+        return [locations[i] for i in range(0, len(locations), 2)]
+    
+    def _get_insertion_ports(self, schedule_locations, vessel: VesselWithEngine, idx, max_insertion):
+        if idx == 1:
+            return (vessel.location, schedule_locations[0] if schedule_locations else None)
+        elif idx == max_insertion:
+            return (schedule_locations[-1] if schedule_locations else vessel.location, None)
         else:
-            # -2 because indices in schedule_locations are shifted
-            pickup_left = schedule_locations[idx_pickup - 2]
-            pickup_right = schedule_locations[idx_pickup - 1]
-
-        # Handle dropoff points
-        if idx_dropoff == 1:
-            dropoff_left = vessel.location
-            dropoff_right = schedule_locations[0] if schedule_locations else None
-        elif idx_dropoff == max_insertion:
-            dropoff_left = schedule_locations[-1] if schedule_locations else vessel.location
-            dropoff_right = None
-        else:
-            dropoff_left = schedule_locations[idx_dropoff - 2]
-            dropoff_right = schedule_locations[idx_dropoff - 1]
-
-        return pickup_left, pickup_right, dropoff_left, dropoff_right
+            return (schedule_locations[idx - 2], schedule_locations[idx - 1])

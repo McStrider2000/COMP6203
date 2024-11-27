@@ -1,4 +1,5 @@
 from mable.examples import environment, fleets, companies
+from mable.cargo_bidding import TradingCompany
 from typing import Callable
 import os
 import logging
@@ -7,36 +8,43 @@ import subprocess
 
 from MyCompany import MyCompany
 
+class MostBasicCompany(TradingCompany):
+
+    def inform(self, trades, *args, **kwargs):
+        return []
+
 def build_specification():
-    logger = logging.getLogger('build_specification')
+    num_suezmax = 1
+    num_aframax = 1
+    num_vlcc = 1
     number_of_month = 12
     trades_per_auction = 6
-    specifications_builder = environment.get_specification_builder(
-        environment_files_path="../resources",
+    specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
         trades_per_occurrence=trades_per_auction,
-        num_auctions=number_of_month
-    )
-    my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
-    specifications_builder.add_company(
-        MyCompany.Data(MyCompany, my_fleet, MyCompany.__name__))
+        num_auctions=number_of_month)
+    my_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
+    specifications_builder.add_company(MyCompany.Data(MyCompany, my_fleet, MyCompany.__name__))
     for vessel in my_fleet:
-        logger.info(f"Vessel of mycompany {vessel.name}")
+        print("Vessel of mycompany",vessel.name)
 
-    arch_enemy_fleet = fleets.mixed_fleet(
-        num_suezmax=1, num_aframax=1, num_vlcc=1)
+    # fake_my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
+    # specifications_builder.add_company(MyCompany.Data(MyCompany, fake_my_fleet, "Imposter Company"))
+
+    basic_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
+    specifications_builder.add_company(MostBasicCompany.Data(MostBasicCompany, basic_fleet, MostBasicCompany.__name__))
+    arch_enemy_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
     specifications_builder.add_company(
         companies.MyArchEnemy.Data(
             companies.MyArchEnemy, arch_enemy_fleet, "Arch Enemy Ltd.",
-            profit_factor=1.5))
-    the_scheduler_fleet = fleets.mixed_fleet(
-        num_suezmax=1, num_aframax=1, num_vlcc=1)
+            profit_factor=2.1))
+    the_scheduler_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
     for vessel in the_scheduler_fleet:
         vessel.name = "The Scheduler"+str(vessel.name)
-        logger.info(f"Vessel of the scheduler {vessel.name}")
+        print("Vessel of the scheduler",vessel.name)
     specifications_builder.add_company(
         companies.TheScheduler.Data(
             companies.TheScheduler, the_scheduler_fleet, "The Scheduler LP",
-            profit_factor=1.4))
+            profit_factor=2.5))
     sim = environment.generate_simulation(
         specifications_builder,
         show_detailed_auction_outcome=True,
