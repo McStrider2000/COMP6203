@@ -102,11 +102,16 @@ class MyCompany(TradingCompany):
             chosen_vessel = None
             cheapest_schedule = None
             lowest_cost_increase = float('inf')
+
+            orginal_lowest_cost_increase = float('inf')
             
             for vessel in self.fleet:
                 curr_schedule = schedules.get(vessel, vessel.schedule)
+                original_schedule = vessel.schedule
                 vessel_schedule, cost_increase = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel)
-                
+
+                original_vessel_schedule, original_cost_increase = self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
+                orginal_lowest_cost_increase= min(orginal_lowest_cost_increase, original_cost_increase)
                 if vessel_schedule is not None:
                     estimated_cost = self.estimate_fulfilment_cost(vessel, trade)
                     
@@ -128,6 +133,9 @@ class MyCompany(TradingCompany):
                         pickup_idx = schedule_locations.index(trade.origin_port) + 1
                         dropoff_idx = schedule_locations.index(trade.destination_port) + 1
                         tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
+
+            if lowest_cost_increase < orginal_lowest_cost_increase:
+                lowest_cost_increase = orginal_lowest_cost_increase
 
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
@@ -213,7 +221,9 @@ class MyCompany(TradingCompany):
                         gas_increase_unloading = vessel.get_unloading_consumption(time_to_load)
                         
                         cost_increase = vessel.get_cost(gas_increase_travel + gas_increase_loading + gas_increase_unloading)
-                        # cost_increase += vessel.get_cost(vessel.get_idle_consumption(overall_time_increase - time_to_trade))
+                        
+                        if schedule.completion_time() != 0:
+                            cost_increase += max(0,vessel.get_cost(vessel.get_idle_consumption(overall_time_increase - time_to_trade)))
                         
                         if cost_increase < cheapest_schedule_cost_increase:
                             cheapest_schedule = schedule_option

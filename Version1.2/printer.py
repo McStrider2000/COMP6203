@@ -68,3 +68,12 @@ class PrettyPrinter:
             print("Locations schedule of vessel",vessel.schedule._get_node_locations())
             print("Insertion points of vessel",vessel.schedule.get_insertion_points())
             print("------------------------------------------")
+
+
+def print_lowest_long_to_short(lowest_cost_increase, orginal_lowest_cost_increase):
+    """Print cost increase comparison in red text."""
+    RED = '\033[91m'    # Red text
+    ENDC = '\033[0m'    # Reset to default color
+    
+    print(f"{RED}Lowest cost increase from long to short schedule{ENDC}")
+    print(f"{RED}Cost increased from {lowest_cost_increase} to {orginal_lowest_cost_increase}{ENDC}")
