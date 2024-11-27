@@ -1,95 +1,21 @@
-import sys
-
+from mable.shipping_market import Trade
 from mable.cargo_bidding import TradingCompany
-from mable.transport_operation import ScheduleProposal, Bid
-from mable.examples import environment, fleets, companies
+from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
-from dataclasses import dataclass
+from mable.extensions.fuel_emissions import VesselWithEngine
+from typing import List
+import logging
 
-from printer import PrettyPrinter  
-
-import random
-from typing import List, Tuple
-
-@dataclass
-class GeneticScheduleResult:
-    schedules: dict
-    scheduled_trades: list
-    costs: dict
-    fitness: float
-    generation: int
+from CostEstimation import CostEstimator
 
 
-class MostBasicCompany(TradingCompany):
+class BruteScheduleGenerator(CostEstimator):
 
-    def inform(self, trades, *args, **kwargs):
-        return []
+    def __init__(self, company: TradingCompany):
+        super().__init__(company=company)
+        self.logger = logging.getLogger(self.__class__.__name__)
 
-
-
-
-class MyCompany(TradingCompany):
-
-    def __init__(self, fleet, name):
-        super().__init__(fleet, name)
-        self._future_trades = None
-        self.population_size = 20
-        self.generations = 10
-        self.mutation_rate = 0.2
-        self.elite_size = 2
-        self.tournament_size = 3
-        self.schedule_to_locations = {}
-
-    def pre_inform(self, trades, time):
-        self._future_trades = trades
-
-    def inform(self, trades, *args, **kwargs):
-        PrettyPrinter.print_fleet_schedules(self.fleet)
-        proposed_scheduling = self.propose_schedules(trades)
-        scheduled_trades = proposed_scheduling.scheduled_trades
-        self._current_scheduling_proposal = proposed_scheduling
-        trades_and_costs = [
-            (x, proposed_scheduling.costs[x]) if x in proposed_scheduling.costs
-            else (x, 0)
-            for x in scheduled_trades]
-        bids = [Bid(amount=cost, trade=one_trade) for one_trade, cost in trades_and_costs]
-        # for bid in bids:
-        #     print(f"{self.name} bidding {bid.amount} for trade {bid.trade}")
-        self._future_trades = None
-        return bids
-
-    # reruns proposedschedules
-    # contracts is the contracts that we have won in the auction
-    # auction_ledger is the contracts that the other companies have won in the auction (index by company name)
-    def receive(self, contracts, auction_ledger=None, *args, **kwargs):
-        #Trade is the trades that we have won in this current auction
-        trades = [one_contract.trade for one_contract in contracts]
-        scheduling_proposal = self.find_schedules(trades)
-        rejected_trades = self.apply_schedules(scheduling_proposal.schedules)
-        PrettyPrinter.print_fleet_schedules(self.fleet)
-        if rejected_trades:
-            print("\033[91m====================ERROR====================")
-            print("Rejected Trades Detected")
-            print(f"Rejected trades: {rejected_trades}")
-            print("=============================================\033[0m")
-
-
-    # find the schedules for the trades for applying to the ships 
-    def find_schedules(self, trades):
-        scheduleProposal = self.propose_schedules(trades)
-
-        return ScheduleProposal(scheduleProposal.schedules, scheduleProposal.scheduled_trades, scheduleProposal.costs)
-    
-
-
-
-    def propose_schedules(self, trades):        
-        # if len(trades) <= 10:
-        return self._propose_brute_schedules(trades)
-        
-        # return self._propose_genetic_schedules(trades)
-    
-    def _propose_brute_schedules(self, trades):
+    def generate(self, trades: List[Trade]) -> ScheduleProposal:
         schedules = {}
         scheduled_trades = []
         costs = {}
@@ -105,7 +31,7 @@ class MyCompany(TradingCompany):
 
             orginal_lowest_cost_increase = float('inf')
             
-            for vessel in self.fleet:
+            for vessel in self.company.fleet:
                 curr_schedule = schedules.get(vessel, vessel.schedule)
                 original_schedule = vessel.schedule
                 vessel_schedule, cost_increase = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel)
@@ -143,10 +69,9 @@ class MyCompany(TradingCompany):
                 costs[trade] = lowest_cost_increase
 
         # Using the static PrettyPrinter class instead of instance method
-        PrettyPrinter.print_schedule_analysis(trades, tradesToIdxs, cost_comparisons)
         return ScheduleProposal(schedules, scheduled_trades, costs)
-        
-    def find_cheapest_schedule(self, schedule, trade, vessel):
+
+    def find_cheapest_schedule(self, schedule: Schedule, trade: Trade, vessel: VesselWithEngine):
         insertion_points = schedule.get_insertion_points()
         cheapest_schedule = None
         cheapest_schedule_cost_increase = float('inf')
@@ -235,12 +160,11 @@ class MyCompany(TradingCompany):
 
         return cheapest_schedule, cheapest_schedule_cost_increase
 
-
     def calc_time_to_travel(self, vessel, location_a, location_b):
-        distance_to_pickup = self.headquarters.get_network_distance(location_a, location_b)
+        distance_to_pickup = self.company.headquarters.get_network_distance(
+            location_a, location_b)
         time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
         return time_to_pick_up
-                        
 
     def get_ports_around_insertion(self, schedule, vessel, idx_both):
         schedule_locations = self._get_schedule_locations(schedule)
@@ -254,8 +178,8 @@ class MyCompany(TradingCompany):
             left_idx = idx_both - 2
             right_idx = idx_both - 1
             return schedule_locations[left_idx], schedule_locations[right_idx]
-    
-    def get_ports_around_insertion_pair(self, schedule, vessel, idx_pickup, idx_dropoff):
+
+    def get_ports_around_insertion_pair(self, schedule: Schedule, vessel: VesselWithEngine, idx_pickup, idx_dropoff):
         schedule_locations = self._get_schedule_locations(schedule)
         max_insertion = max(schedule.get_insertion_points())
         
@@ -263,94 +187,15 @@ class MyCompany(TradingCompany):
         dropoff_ports = self._get_insertion_ports(schedule_locations, vessel, idx_dropoff, max_insertion)
         
         return pickup_ports + dropoff_ports
-    
-    def _get_schedule_locations(self, schedule):
+
+    def _get_schedule_locations(self, schedule: Schedule):
         locations = schedule._get_node_locations()
         return [locations[i] for i in range(0, len(locations), 2)]
-
-    def _get_insertion_ports(self, schedule_locations, vessel, idx, max_insertion):
+    
+    def _get_insertion_ports(self, schedule_locations, vessel: VesselWithEngine, idx, max_insertion):
         if idx == 1:
             return (vessel.location, schedule_locations[0] if schedule_locations else None)
         elif idx == max_insertion:
             return (schedule_locations[-1] if schedule_locations else vessel.location, None)
         else:
             return (schedule_locations[idx - 2], schedule_locations[idx - 1])
-        
-
-    
-    def estimate_fulfilment_cost(self, vessel, trade) -> float:
-        """ 
-        Calculate the cost of fulfilling a trade given a vessel.
-        Assumes that the vessel is ballast when traveling to the origin port.
-        Args:
-          vessel (VesselWithEngine): The vessel to fulfill the trade with.
-          trade (Trade): The trade to fulfill.
-        Returns:
-          Prediction: The predicted cost of fulfilling the trade. Always 100% confident.
-        """
-        # Calculate total fuel consumption
-        time_to_load = vessel.get_loading_time(trade.cargo_type, trade.amount)
-        pick_up_travel_fuel = self.calculate_travel_consumption(
-            vessel, vessel.location, trade.origin_port, False)
-        loading_fuel = vessel.get_loading_consumption(time_to_load)
-        drop_off_travel_fuel = self.calculate_travel_consumption(
-            vessel, trade.origin_port, trade.destination_port, True)
-        unloading_fuel = vessel.get_unloading_consumption(time_to_load)
-
-        # Return total cost of fuel
-        return vessel.get_cost(pick_up_travel_fuel + loading_fuel + drop_off_travel_fuel + unloading_fuel)
-	
-    def calculate_travel_consumption(self, vessel, location_a, location_b, if_laden=False):
-        distance_to_pickup = self.headquarters.get_network_distance(location_a, location_b)
-        time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
-        if if_laden:
-            return vessel.get_laden_consumption(time_to_pick_up, vessel.speed)
-        else:
-            return vessel.get_ballast_consumption(time_to_pick_up, vessel.speed)
-
-
-def build_specification():
-    num_suezmax = 1
-    num_aframax = 1
-    num_vlcc = 1
-    number_of_month = 6
-    trades_per_auction = 12
-    specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
-        trades_per_occurrence=trades_per_auction,
-        num_auctions=number_of_month)
-    my_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    specifications_builder.add_company(MyCompany.Data(MyCompany, my_fleet, MyCompany.__name__))
-    for vessel in my_fleet:
-        print("Vessel of mycompany",vessel.name)
-
-    # fake_my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
-    # specifications_builder.add_company(MyCompany.Data(MyCompany, fake_my_fleet, "Imposter Company"))
-
-    basic_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    specifications_builder.add_company(MostBasicCompany.Data(MostBasicCompany, basic_fleet, MostBasicCompany.__name__))
-    arch_enemy_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    specifications_builder.add_company(
-        companies.MyArchEnemy.Data(
-            companies.MyArchEnemy, arch_enemy_fleet, "Arch Enemy Ltd.",
-            profit_factor=2.1))
-    the_scheduler_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    for vessel in the_scheduler_fleet:
-        vessel.name = "The Scheduler"+str(vessel.name)
-        print("Vessel of the scheduler",vessel.name)
-    specifications_builder.add_company(
-        companies.TheScheduler.Data(
-            companies.TheScheduler, the_scheduler_fleet, "The Scheduler LP",
-            profit_factor=2.5))
-    sim = environment.generate_simulation(
-        specifications_builder,
-        show_detailed_auction_outcome=True,
-        global_agent_timeout=60)
-    sim.run()
-
-
-
-
-
-
-if __name__ == '__main__':
-    build_specification()
