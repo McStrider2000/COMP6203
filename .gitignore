@@ -1,5 +1,7 @@
 .idea
-TradingCompany/*.json
-TradingCompany/*.csv
-TradingCompany/*.pkl
-TradingCompany/*.pickle
+*/*.json
+*/*.csv
+*/*.pkl
+*/*.pickle
+*/__pycache__
+*/logs.txt
