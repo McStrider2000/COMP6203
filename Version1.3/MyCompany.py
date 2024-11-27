@@ -19,15 +19,6 @@ class MyCompany(TradingCompany):
         self.brute_schedule_generator = BruteScheduleGenerator(
             company=self
         )
-        self.genetic_schedule_generator = GeneticScheduleGenerator(
-            company=self,
-            brute_schedule_generator=self.brute_schedule_generator,
-            population_size=20,
-            generations=10,
-            mutation_rate=0.2,
-            elite_size=2,
-            tournament_size=3
-        )
         
 
     def log_fleet(self, fleet: List[VesselWithEngine]=None):
@@ -73,7 +64,4 @@ class MyCompany(TradingCompany):
         return ScheduleProposal(scheduleProposal.schedules, scheduleProposal.scheduled_trades, scheduleProposal.costs)
 
     def propose_schedules(self, trades: List[Trade]):
-        # If we have less than 10 trades, we will use the brute force schedule generator
-        if len(trades) <= 10:
-            return self.brute_schedule_generator.generate(trades)
-        return self.genetic_schedule_generator.generate(trades)
+       return self.brute_schedule_generator.generate(trades)
