@@ -53,6 +53,9 @@ class MyCompany(TradingCompany):
         return bids
     
     def receive(self, contracts: List[Contract], auction_ledger:AuctionLedger=None, *args, **kwargs):
+        # Update the opponent tracker 
+        self.opponent_tracker.receive(contracts, auction_ledger)
+        
         # Trade is the trades that we have won in this current auction
         trades = [one_contract.trade for one_contract in contracts]
         scheduling_proposal = self.find_schedules(trades)
