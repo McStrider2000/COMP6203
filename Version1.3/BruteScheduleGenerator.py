@@ -8,6 +8,7 @@ import logging
 
 from CostEstimation import CostEstimator
 
+
 class BruteScheduleGenerator(CostEstimator):
 
     def __init__(self, company: TradingCompany):
@@ -30,7 +31,8 @@ class BruteScheduleGenerator(CostEstimator):
 
             for vessel in self.company.fleet:
                 vessel: VesselWithEngine
-                curr_schedule: Schedule = schedules.get(vessel, vessel.schedule)
+                curr_schedule: Schedule = schedules.get(
+                    vessel, vessel.schedule)
                 vessel_schedule, cost_increase = self.find_cheapest_schedule(
                     curr_schedule.copy(), trade, vessel)
 
@@ -38,7 +40,7 @@ class BruteScheduleGenerator(CostEstimator):
                     continue
 
                 estimated_cost = self.estimate_fulfilment_cost(vessel, trade)
-                if not(cost_increase < lowest_cost_increase):
+                if not (cost_increase < lowest_cost_increase):
                     continue
 
                 cheapest_schedule = vessel_schedule
@@ -63,7 +65,7 @@ class BruteScheduleGenerator(CostEstimator):
                 dropoff_idx = schedule_locations.index(
                     trade.destination_port) + 1
                 tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
-                        
+
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = cheapest_schedule
@@ -74,28 +76,22 @@ class BruteScheduleGenerator(CostEstimator):
         for trade in trades:
             if trade in tradesToIdxs:
                 self.logger.info(
-                    f"\nTrade: {
-                        trade.origin_port} -> {trade.destination_port} | "
-                    f"Schedule: Start at idx {tradesToIdxs[trade][0]}, End at idx {
-                        tradesToIdxs[trade][1]}"
+                    f"\nTrade: {trade.origin_port} -> {trade.destination_port} | "
+                    f"Schedule: Start at idx {tradesToIdxs[trade][0]}, End at idx {tradesToIdxs[trade][1]}"
                 )
 
                 if trade in cost_comparisons:
                     comparison = cost_comparisons[trade]
                     self.logger.info(
                         "Cost Analysis:\n"
-                        f"  Detailed cost: {
-                            comparison['detailed_cost']:.2f} | "
-                        f" Estimated cost: {
-                            comparison['estimated_cost']:.2f} | "
+                        f"  Detailed cost: {comparison['detailed_cost']: .2f} | "
+                        f" Estimated cost: {comparison['estimated_cost']: .2f} | "
                         f" Difference: {comparison['difference']:.2f} | "
-                        f" Percentage: {
-                            comparison['difference_percentage']:.2f}%"
+                        f" Percentage: {comparison['difference_percentage']: .2f} %"
                     )
             else:
                 self.logger.info(
-                    f"\nTrade: {
-                        trade.origin_port} -> {trade.destination_port} (Could not be scheduled)"
+                    f"\nTrade: {trade.origin_port} -> {trade.destination_port}(Could not be scheduled)"
                 )
 
         # Calculate and print aggregate statistics
@@ -114,8 +110,7 @@ class BruteScheduleGenerator(CostEstimator):
 
             self.logger.info(
                 f"Average cost difference: {avg_difference:.2f} | "
-                f"Average difference percentage: {
-                    avg_difference_percentage:.2f}% | "
+                f"Average difference percentage: {avg_difference_percentage: .2f} % | "
                 f"Maximum difference: {max_difference:.2f} | "
                 f"Minimum difference: {min_difference:.2f}"
             )
@@ -149,8 +144,10 @@ class BruteScheduleGenerator(CostEstimator):
                             schedule=schedule_option, vessel=vessel, trade=trade, time_to_load=time_to_load, idx_pick_up=idx_pick_up, idx_drop_off=idx_drop_off
                         )
 
-                    gas_increase_loading = vessel.get_loading_consumption(time_to_load)
-                    gas_increase_unloading = vessel.get_unloading_consumption(time_to_load)
+                    gas_increase_loading = vessel.get_loading_consumption(
+                        time_to_load)
+                    gas_increase_unloading = vessel.get_unloading_consumption(
+                        time_to_load)
 
                     cost_increase = vessel.get_cost(
                         gas_increase_travel + gas_increase_loading + gas_increase_unloading)
@@ -198,32 +195,41 @@ class BruteScheduleGenerator(CostEstimator):
         time_to_trade = time_to_load + time_to_load
 
         # Add travel times for the pickup segment
-        time_to_trade += self.calc_time_to_travel(vessel, pickup_left, trade.origin_port)
+        time_to_trade += self.calc_time_to_travel(
+            vessel, pickup_left, trade.origin_port)
         if pickup_right is not None:
-            time_to_trade += self.calc_time_to_travel(vessel, trade.origin_port, pickup_right)
+            time_to_trade += self.calc_time_to_travel(
+                vessel, trade.origin_port, pickup_right)
 
         # Add travel times for the drop-off segment
-        time_to_trade += self.calc_time_to_travel(vessel, dropoff_left, trade.destination_port)
+        time_to_trade += self.calc_time_to_travel(
+            vessel, dropoff_left, trade.destination_port)
         if dropoff_right is not None:
-            time_to_trade += self.calc_time_to_travel(vessel, trade.destination_port, dropoff_right)
+            time_to_trade += self.calc_time_to_travel(
+                vessel, trade.destination_port, dropoff_right)
 
         # Initialize gas consumption for travel
-        gas_increase_travel = self.calculate_travel_consumption(vessel, pickup_left, trade.origin_port, False)
+        gas_increase_travel = self.calculate_travel_consumption(
+            vessel, pickup_left, trade.origin_port, False)
 
         # Add gas consumption for the pickup segment
         if pickup_right is not None:
-            gas_increase_travel += self.calculate_travel_consumption(vessel, trade.origin_port, pickup_right, True)
-            gas_increase_travel -= self.calculate_travel_consumption(vessel, pickup_left, pickup_right, True)
+            gas_increase_travel += self.calculate_travel_consumption(
+                vessel, trade.origin_port, pickup_right, True)
+            gas_increase_travel -= self.calculate_travel_consumption(
+                vessel, pickup_left, pickup_right, True)
 
         # Add gas consumption for the drop-off segment
         if dropoff_right is not None:
             gas_increase_travel += (
                 self.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True) +
                 self.calculate_travel_consumption(vessel, trade.destination_port, dropoff_right, False) -
-                self.calculate_travel_consumption(vessel, dropoff_left, dropoff_right, True)
+                self.calculate_travel_consumption(
+                    vessel, dropoff_left, dropoff_right, True)
             )
         else:
-            gas_increase_travel += self.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True)
+            gas_increase_travel += self.calculate_travel_consumption(
+                vessel, dropoff_left, trade.destination_port, True)
         return time_to_trade, gas_increase_travel
 
     def calc_time_to_travel(self, vessel, location_a, location_b):
