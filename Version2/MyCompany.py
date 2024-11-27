@@ -3,13 +3,14 @@ import sys
 from mable.cargo_bidding import TradingCompany
 from mable.competition.information import CompanyHeadquarters
 from mable.shipping_market import Trade
+from mable.simulation_space import Port
 from mable.transport_operation import ScheduleProposal, Bid
 from mable.examples import environment, fleets, companies
 from mable.transportation_scheduling import Schedule
 from dataclasses import dataclass
 
 import random
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Union
 
 
 @dataclass
@@ -138,11 +139,24 @@ class MyCompany(TradingCompany):
                         dropoff_idx = schedule_locations.index(trade.destination_port) + 1
                         tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
 
-                        closest_trade, future_distance = self.find_closest_trade(trade, self._future_trades, self.headquarters)
-                        print(tradesToIdxs)
-                        sys.exit(1)
-                        possible_future_schedule, possible_start, possible_end = self.find_shortest_schedule(vessel_schedule.copy(), closest_trade)
-                        future_estimation = self.estimate_fulfilment_cost(vessel, closest_trade)
+                        # Find the trade with the closest pickup to the current trades drop off
+                        closest_trade, future_distance = self.find_closest_trade(trade.destination_port, self._future_trades, self.headquarters)
+                        if closest_trade:
+                            if dropoff_idx > 1:
+                                alt_start = schedule_locations[dropoff_idx - 2]
+                            else:
+                                alt_start = vessel.location
+
+                            alt_future, alt_distance = self.find_closest_trade(alt_start, self._future_trades, self.headquarters)
+
+                            cost_comparisons[trade]['future_trade'] = {
+                                'trade': closest_trade,
+                                'distance': future_distance,
+                                'estimated_cost': self.estimate_fulfilment_cost(vessel, closest_trade),
+                                'distance_if_omit_trade': alt_distance
+                            }
+                        else:
+                            cost_comparisons[trade]['future_trade'] = {}
 
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
@@ -402,18 +416,18 @@ class MyCompany(TradingCompany):
         return shortest_schedule, picked_start, picked_end
 
     @staticmethod
-    def find_closest_trade(trade : Trade, future_trades : list[Trade], hq : CompanyHeadquarters) -> Tuple[Optional[Trade], float]:
+    def find_closest_trade(starting_point : Union[Port, str], future_trades : list[Trade], hq : CompanyHeadquarters) -> Tuple[Optional[Trade], float]:
         if not future_trades:
             return None, float('inf')
 
         closest_future_trade = min(
             future_trades,
             key=lambda future_trade: hq.get_network_distance(
-                trade.destination_port, future_trade.origin_port
+                starting_point, future_trade.origin_port
             )
         )
 
-        distance = hq.get_network_distance(trade.destination_port, closest_future_trade.origin_port)
+        distance = hq.get_network_distance(starting_point, closest_future_trade.origin_port)
 
         return closest_future_trade, distance
 
