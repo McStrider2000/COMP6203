@@ -34,35 +34,36 @@ class BruteScheduleGenerator(CostEstimator):
                 vessel_schedule, cost_increase = self.find_cheapest_schedule(
                     curr_schedule.copy(), trade, vessel)
 
-                if vessel_schedule is not None:
-                    # Compare with the estimate_fulfilment_cost
-                    estimated_cost = self.estimate_fulfilment_cost(
-                        vessel, trade)
+                if vessel_schedule is None:
+                    continue
 
-                    if cost_increase < lowest_cost_increase:
-                        cheapest_schedule = vessel_schedule
-                        chosen_vessel = vessel
-                        lowest_cost_increase = cost_increase
+                estimated_cost = self.estimate_fulfilment_cost(vessel, trade)
+                if not(cost_increase < lowest_cost_increase):
+                    continue
 
-                        # Store both costs for comparison
-                        cost_comparisons[trade] = {
-                            'detailed_cost': cost_increase,
-                            'estimated_cost': estimated_cost,
-                            'difference': estimated_cost - cost_increase,
-                            'difference_percentage': ((estimated_cost - cost_increase) / cost_increase) * 100 if cost_increase > 0 else 0
-                        }
+                cheapest_schedule = vessel_schedule
+                chosen_vessel = vessel
+                lowest_cost_increase = cost_increase
 
-                        # Get the pickup and dropoff indices from the modified schedule
-                        schedule_locations = vessel_schedule._get_node_locations()
-                        schedule_locations = [schedule_locations[i]
-                                              for i in range(0, len(schedule_locations), 2)]
+                # Store both costs for comparison
+                cost_comparisons[trade] = {
+                    'detailed_cost': cost_increase,
+                    'estimated_cost': estimated_cost,
+                    'difference': estimated_cost - cost_increase,
+                    'difference_percentage': ((estimated_cost - cost_increase) / cost_increase) * 100 if cost_increase > 0 else 0
+                }
 
-                        pickup_idx = schedule_locations.index(
-                            trade.origin_port) + 1
-                        dropoff_idx = schedule_locations.index(
-                            trade.destination_port) + 1
-                        tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
+                # Get the pickup and dropoff indices from the modified schedule
+                schedule_locations = vessel_schedule._get_node_locations()
+                schedule_locations = [schedule_locations[i]
+                                      for i in range(0, len(schedule_locations), 2)]
 
+                pickup_idx = schedule_locations.index(
+                    trade.origin_port) + 1
+                dropoff_idx = schedule_locations.index(
+                    trade.destination_port) + 1
+                tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
+                        
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = cheapest_schedule
