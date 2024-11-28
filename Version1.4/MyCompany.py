@@ -11,6 +11,7 @@ import mable.event_management
 import logging
 
 from BruteScheduleGenerator import BruteScheduleGenerator
+from FutureTrades import FutureTradesHelper
 from OpponentTracker import OpponentTracker
 import collections
 
@@ -29,19 +30,17 @@ class MyCompany(TradingCompany):
         # Fix the logging - use one of these options:
         # Option 1 - Using string formatting:
         self.logger.info(f"self.vessel_schedule_locations: {self.vessel_schedule_locations}")
-        
-
-        
 
         self.vessel_journey_log_update = {vessel: 0 for vessel in  self.fleet}
 
         self.trades_to_vessel_idxs = {}
 
-
+        self.future_trades_helper = FutureTradesHelper(self)
         
-		# New encapsulated class for stuff 
+        # New encapsulated class for stuff
         self.brute_schedule_generator = BruteScheduleGenerator(
-            company=self
+            company=self,
+            future_trades_helper=self.future_trades_helper
         )
         self.opponent_tracker = OpponentTracker(
             company=self
@@ -59,7 +58,7 @@ class MyCompany(TradingCompany):
             
     def pre_inform(self, trades: List[Trade], time):
         self.remove_vessel_schedule_locations()
-        self._future_trades = trades
+        self.future_trades = trades
 
     def inform(self, trades: List[Trade], *args, **kwargs):
         self.remove_vessel_schedule_locations()
@@ -75,7 +74,7 @@ class MyCompany(TradingCompany):
 
         # Update the current scheduling proposal and clear the future trades
         self._current_scheduling_proposal = proposed_scheduling
-        self._future_trades = None
+        self.future_trades = None
 
         return bids
     
@@ -152,3 +151,11 @@ class MyCompany(TradingCompany):
     def propose_schedules(self, trades: List[Trade]):
        result, self.trades_to_vessel_idxs = self.brute_schedule_generator.generate(trades)
        return result
+
+    @property
+    def future_trades(self):
+        return self._future_trades
+
+    @future_trades.setter
+    def future_trades(self, future_trades):
+        self._future_trades = future_trades
