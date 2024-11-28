@@ -13,9 +13,6 @@ class FutureTradesHelper:
         self.company = company
         self.cost_estimator = CostEstimator(company)
 
-    def test(self):
-        print("Hellooooo")
-
     def handle_future_trades(self, vessel, trade):
         # Find the trade with the closest pickup to the current trades drop off
         closest_trade, future_distance = self.find_closest_trade(trade.destination_port, self.company.future_trades, self.company.headquarters)
