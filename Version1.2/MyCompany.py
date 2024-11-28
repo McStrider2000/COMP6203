@@ -67,6 +67,14 @@ class MyCompany(TradingCompany):
         scheduling_proposal = self.find_schedules(trades)
         rejected_trades = self.apply_schedules(scheduling_proposal.schedules)
         PrettyPrinter.print_fleet_schedules(self.fleet)
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        for vessel in self.fleet:
+            print("-------------------------------------")
+            print(f"Vessel {vessel.name} journey logs")
+            for event in vessel.journey_log:
+                print(event)
+                print(type(event))
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
         if rejected_trades:
             print("\033[91m====================ERROR====================")
             print("Rejected Trades Detected")
@@ -313,8 +321,8 @@ def build_specification():
     num_suezmax = 1
     num_aframax = 1
     num_vlcc = 1
-    number_of_month = 6
-    trades_per_auction = 12
+    number_of_month = 4
+    trades_per_auction = 6
     specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
         trades_per_occurrence=trades_per_auction,
         num_auctions=number_of_month)

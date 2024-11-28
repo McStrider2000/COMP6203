@@ -18,11 +18,12 @@ class PrettyPrinter:
 
     @staticmethod
     def print_scheduled_trade_details(trade, tradesToIdxs, cost_comparisons):
-        print(f"\nTrade: {trade.origin_port} -> {trade.destination_port}")
-        print(f"Schedule: Start at idx {tradesToIdxs[trade][0]}, End at idx {tradesToIdxs[trade][1]}")
+        pass
+        # print(f"\nTrade: {trade.origin_port} -> {trade.destination_port}")
+        # print(f"Schedule: Start at idx {tradesToIdxs[trade][0]}, End at idx {tradesToIdxs[trade][1]}")
         
-        if trade in cost_comparisons:
-            PrettyPrinter.print_cost_comparison(cost_comparisons[trade])
+        # if trade in cost_comparisons:
+        #     PrettyPrinter.print_cost_comparison(cost_comparisons[trade])
 
     @staticmethod
     def print_unscheduled_trade_details(trade):
@@ -30,23 +31,25 @@ class PrettyPrinter:
 
     @staticmethod
     def print_cost_comparison(comparison):
-        print("Cost Analysis:")
-        print(f"  Detailed cost (find_cheapest_schedule)   : {comparison['detailed_cost']:.2f}")
-        print(f"  Estimated cost (estimate_fulfilment_cost): {comparison['estimated_cost']:.2f}")
-        print(f"  Difference: {comparison['difference']:.2f}")
-        print(f"  Difference percentage: {comparison['difference_percentage']:.2f}%")
+        pass
+        # print("Cost Analysis:")
+        # print(f"  Detailed cost (find_cheapest_schedule)   : {comparison['detailed_cost']:.2f}")
+        # print(f"  Estimated cost (estimate_fulfilment_cost): {comparison['estimated_cost']:.2f}")
+        # print(f"  Difference: {comparison['difference']:.2f}")
+        # print(f"  Difference percentage: {comparison['difference_percentage']:.2f}%")
 
     @staticmethod
     def print_aggregate_statistics(cost_comparisons):
-        print("\nAggregate Cost Analysis:")
-        print("-" * 80)
+        pass
+        # print("\nAggregate Cost Analysis:")
+        # print("-" * 80)
         
-        statistics = PrettyPrinter.calculate_aggregate_statistics(cost_comparisons)
+        # statistics = PrettyPrinter.calculate_aggregate_statistics(cost_comparisons)
         
-        print(f"Average cost difference: {statistics['avg_difference']:.2f}")
-        print(f"Average difference percentage: {statistics['avg_difference_percentage']:.2f}%")
-        print(f"Maximum difference: {statistics['max_difference']:.2f}")
-        print(f"Minimum difference: {statistics['min_difference']:.2f}")
+        # print(f"Average cost difference: {statistics['avg_difference']:.2f}")
+        # print(f"Average difference percentage: {statistics['avg_difference_percentage']:.2f}%")
+        # print(f"Maximum difference: {statistics['max_difference']:.2f}")
+        # print(f"Minimum difference: {statistics['min_difference']:.2f}")
 
     @staticmethod
     def calculate_aggregate_statistics(cost_comparisons):
