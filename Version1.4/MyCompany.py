@@ -79,6 +79,9 @@ class MyCompany(TradingCompany):
         return bids
     
     def receive(self, contracts: List[Contract], auction_ledger:AuctionLedger=None, *args, **kwargs):
+        print(type(auction_ledger))
+        print("loookie here")
+        print(auction_ledger)
         self.remove_vessel_schedule_locations()
         # Update the opponent tracker 
         self.opponent_tracker.receive(contracts, auction_ledger)
@@ -149,6 +152,9 @@ class MyCompany(TradingCompany):
     
     def check_if_BOMB_trade(self, trade: Trade):
         return self.opponent_tracker.check_if_BOMB_trade(trade)
+    
+    def get_profit_factor_for_trade(self, trade: Trade) -> float:
+        return self.opponent_tracker.get_profit_factor_for_trade(trade)
 
 
 

@@ -58,6 +58,8 @@ class BruteScheduleGenerator:
             for vessel in self.company.fleet:
                 curr_schedule = schedules.get(vessel, vessel.schedule)
                 current_vessel_schedule = self.temp_vessel_schedule_locations[vessel]
+                if len(current_vessel_schedule)>26:
+                    continue
                 # original_schedule = vessel.schedule
                 vessel_schedule, cost_increase,temp_chosen_pickup_idx, temp_chosen_dropof_idx, outputed_vessel_schedule  = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel, current_vessel_schedule)
 
@@ -95,6 +97,8 @@ class BruteScheduleGenerator:
                     lowest_cost_increase = 10000000000000000000
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = cheapest_schedule
+                print("Profit factor for trade",self.company.get_profit_factor_for_trade(trade))
+                lowest_cost_increase *= self.company.get_profit_factor_for_trade(trade)
                 costs[trade] = lowest_cost_increase
                 trades_to_idxs[trade] = (chosen_vessel,chosen_pickup_idx, chosen_dropof_idx)
                 self.temp_vessel_schedule_locations[chosen_vessel] = chosen_vessel_schedule

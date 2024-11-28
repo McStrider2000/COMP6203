@@ -17,7 +17,7 @@ def build_specification():
     num_suezmax = 1
     num_aframax = 1
     num_vlcc = 1
-    number_of_month = 9
+    number_of_month = 3
     trades_per_auction = 9
     specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
         trades_per_occurrence=trades_per_auction,
