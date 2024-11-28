@@ -1,9 +1,10 @@
 from mable.cargo_bidding import TradingCompany
+from mable.competition.information import CompanyHeadquarters
 from mable.shipping_market import Trade
 from mable.extensions.fuel_emissions import VesselWithEngine
 
 class CostEstimator:
-    def __init__(self, company: TradingCompany):
+    def __init__(self, company : TradingCompany):
         self.company = company
 
     def estimate_fulfilment_cost(self, vessel: VesselWithEngine, trade: Trade) -> float:

@@ -1,3 +1,5 @@
+import sys
+
 from mable.cargo_bidding import TradingCompany
 from mable.extensions.fuel_emissions import VesselWithEngine
 from mable.transport_operation import Bid
@@ -10,16 +12,18 @@ import logging
 
 from BruteScheduleGenerator import BruteScheduleGenerator
 from OpponentTracker import OpponentTracker
+from FutureTrades import FutureTradesHelper
 
 class MyCompany(TradingCompany):
     def __init__(self, fleet: List[VesselWithEngine], name: str):
         super().__init__(fleet, name)
         self.logger = logging.getLogger(self.__class__.__name__)
-        self._future_trades = None
-        
-		# New encapsulated class for stuff 
+        self.future_trades_helper = FutureTradesHelper(self)
+
+        # New encapsulated class for stuff
         self.brute_schedule_generator = BruteScheduleGenerator(
-            company=self
+            company=self,
+            future_trades_helper=self.future_trades_helper
         )
         self.opponent_tracker = OpponentTracker(
             company=self
@@ -33,7 +37,7 @@ class MyCompany(TradingCompany):
             self.logger.info(f"[{i}] {vessel.name}: Location schedule={vessel.schedule._get_node_locations()}, Insertion points={vessel.schedule.get_insertion_points()}")
             
     def pre_inform(self, trades: List[Trade], time):
-        self._future_trades = trades
+        self.future_trades_helper.future_trades = trades
 
     def inform(self, trades: List[Trade], *args, **kwargs):
         self.log_fleet()
@@ -48,7 +52,7 @@ class MyCompany(TradingCompany):
 
         # Update the current scheduling proposal and clear the future trades
         self._current_scheduling_proposal = proposed_scheduling
-        self._future_trades = None
+        self.future_trades_helper.future_trades = None
 
         return bids
     
