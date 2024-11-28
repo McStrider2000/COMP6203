@@ -146,6 +146,9 @@ class MyCompany(TradingCompany):
             
 
         self.trades_to_vessel_idxs = {}
+    
+    def check_if_BOMB_trade(self, trade: Trade):
+        return self.opponent_tracker.check_if_BOMB_trade(trade)
 
 
 

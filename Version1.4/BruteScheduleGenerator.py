@@ -38,9 +38,7 @@ class BruteScheduleGenerator:
 
         self.temp_vessel_schedule_locations = {vessel: q.copy() for vessel, q in self.company.vessel_schedule_locations.items()}
 
-        print("=3r333333333333333====================")
-        print(self.temp_vessel_schedule_locations)  
-        print("=3r333333333333333====================")
+
 
 
         trades.sort(key=lambda x: x.earliest_drop_off)
@@ -91,6 +89,10 @@ class BruteScheduleGenerator:
             #     lowest_cost_increase = orginal_lowest_cost_increase
 
             if cheapest_schedule is not None:
+                BOMBTRADE = self.company.check_if_BOMB_trade(trade)
+                if BOMBTRADE:
+                    self.logger.critical(f"Trade {trade} is a BOMB trade")
+                    lowest_cost_increase = 10000000000000000000
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = cheapest_schedule
                 costs[trade] = lowest_cost_increase
@@ -142,7 +144,7 @@ class BruteScheduleGenerator:
                                 gas_increase_travel = (self.cost_helper.calculate_travel_consumption(vessel, left, trade.origin_port, False) +
                                                     self.cost_helper.calculate_travel_consumption(vessel, trade.destination_port, right, False) +
                                                     self.cost_helper.calculate_travel_consumption(vessel, trade.origin_port, trade.destination_port, True) -
-                                                    self.cost_helper.calculate_travel_consumption(vessel, left, right, True))
+                                                    self.cost_helper.calculate_travel_consumption(vessel, left, right, False))
                         else:
                             pickup_left, pickup_right, dropoff_left, dropoff_right = self.get_ports_around_insertion_pair(schedule, vessel, idx_pick_up, idx_drop_off,current_vessel_schedule)
                             
@@ -173,13 +175,15 @@ class BruteScheduleGenerator:
                                 gas_increase_travel += (
                                     self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True) +
                                     self.cost_helper.calculate_travel_consumption(vessel, trade.destination_port, dropoff_right, False) -
-                                    self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, dropoff_right, True)
+                                    self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, dropoff_right, False)
                                 )
                             else:
                                 gas_increase_travel += self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True)
 
                         gas_increase_loading = vessel.get_loading_consumption(time_to_load)
                         gas_increase_unloading = vessel.get_unloading_consumption(time_to_load)
+
+
                         
                         cost_increase = vessel.get_cost(gas_increase_travel + gas_increase_loading + gas_increase_unloading)
                         
