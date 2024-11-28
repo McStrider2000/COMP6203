@@ -137,24 +137,7 @@ class MyCompany(TradingCompany):
                         dropoff_idx = schedule_locations.index(trade.destination_port) + 1
                         tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
 
-                        # Find the trade with the closest pickup to the current trades drop off
-                        closest_trade, future_distance = self.find_closest_trade(trade.destination_port, self._future_trades, self.headquarters)
-                        if closest_trade:
-                            if dropoff_idx > 1:
-                                alt_start = schedule_locations[dropoff_idx - 2]
-                            else:
-                                alt_start = vessel.location
-
-                            alt_future, alt_distance = self.find_closest_trade(alt_start, self._future_trades, self.headquarters)
-
-                            cost_comparisons[trade]['future_trade'] = {
-                                'trade': closest_trade,
-                                'distance': future_distance,
-                                'estimated_cost': self.estimate_fulfilment_cost(vessel, closest_trade),
-                                'distance_if_omit_trade': alt_distance
-                            }
-                        else:
-                            cost_comparisons[trade]['future_trade'] = {}
+                        cost_comparisons[trade]['future_trade'] = self.handle_future_trades(vessel, trade, dropoff_idx, schedule_locations)
 
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
@@ -412,6 +395,28 @@ class MyCompany(TradingCompany):
                         picked_end = idx_drop_off
 
         return shortest_schedule, picked_start, picked_end
+
+    def handle_future_trades(self, vessel, trade, dropoff_idx, schedule_locations):
+        # Find the trade with the closest pickup to the current trades drop off
+        closest_trade, future_distance = self.find_closest_trade(trade.destination_port, self._future_trades, self.headquarters)
+        if closest_trade:
+            if dropoff_idx > 1:
+                alt_start = schedule_locations[dropoff_idx - 2]
+            else:
+                alt_start = vessel.location
+
+            alt_future, alt_distance = self.find_closest_trade(alt_start, self._future_trades, self.headquarters)
+
+            trade_dict = {
+                'trade': closest_trade,
+                'distance': future_distance,
+                'estimated_cost': self.estimate_fulfilment_cost(vessel, closest_trade),
+                'distance_if_omit_trade': alt_distance
+            }
+        else:
+            trade_dict = {}
+
+        return trade_dict
 
     @staticmethod
     def find_closest_trade(starting_point : Union[Port, str], future_trades : list[Trade], hq : CompanyHeadquarters) -> Tuple[Optional[Trade], float]:
