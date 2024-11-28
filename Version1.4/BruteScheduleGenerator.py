@@ -1,15 +1,26 @@
+from logging import Logger
+
 from mable.shipping_market import Trade
 from mable.cargo_bidding import TradingCompany
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine
-from typing import List
+from typing import List, Dict, Any, Tuple
 import logging
+
+from numpy.f2py.auxfuncs import throw_error
+
 from CostEstimation import CostEstimator
 from FutureTrades import FutureTradesHelper
 import MyCompany
 
 class BruteScheduleGenerator:
+
+    logger: Logger
+    company: MyCompany
+    cost_helper: CostEstimator
+    future_trade_helper: FutureTradesHelper
+    temp_vessel_schedule_locations: dict[Any, Any]
 
     def __init__(self, company: MyCompany, future_trades_helper: FutureTradesHelper):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -20,10 +31,10 @@ class BruteScheduleGenerator:
 
 
     def generate(self, trades: List[Trade]) -> tuple[ScheduleProposal,dict]:
-        schedules = {}
-        scheduled_trades = []
-        costs = {}
-        cost_comparisons = {}
+        schedules: dict[Any | None, Schedule] = dict()
+        scheduled_trades: list[Trade] = []
+        costs: dict[Trade, float] = dict()
+        cost_comparisons: dict[Trade, dict[str, float | int]] = dict()
 
         self.temp_vessel_schedule_locations = {vessel: q.copy() for vessel, q in self.company.vessel_schedule_locations.items()}
 
@@ -34,10 +45,10 @@ class BruteScheduleGenerator:
 
         trades.sort(key=lambda x: x.earliest_drop_off)
 
-        trades_to_idxs={}
+        trades_to_idxs: dict[Trade, tuple[Any | None, int | None, int | None]] = dict()
 
         for trade in trades:
-            chosen_vessel = None
+            chosen_vessel : VesselWithEngine = None
             cheapest_schedule = None
             lowest_cost_increase = float('inf')
             chosen_pickup_idx=None
@@ -151,21 +162,21 @@ class BruteScheduleGenerator:
                             # Calculate gas consumption for travel with None checks
                             gas_increase_travel = (
                                 # New travel segments
-                                self.calculate_travel_consumption(vessel, pickup_left, trade.origin_port, False)  # To pickup
+                                self.cost_helper.calculate_travel_consumption(vessel, pickup_left, trade.origin_port, False)  # To pickup
                             )
                             
                             if pickup_right is not None:
-                                gas_increase_travel += self.calculate_travel_consumption(vessel, trade.origin_port, pickup_right, True)
-                                gas_increase_travel -= self.calculate_travel_consumption(vessel, pickup_left, pickup_right, True)
+                                gas_increase_travel += self.cost_helper.calculate_travel_consumption(vessel, trade.origin_port, pickup_right, True)
+                                gas_increase_travel -= self.cost_helper.calculate_travel_consumption(vessel, pickup_left, pickup_right, True)
                                 
                             if dropoff_right is not None:
                                 gas_increase_travel += (
-                                    self.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True) +
-                                    self.calculate_travel_consumption(vessel, trade.destination_port, dropoff_right, False) -
-                                    self.calculate_travel_consumption(vessel, dropoff_left, dropoff_right, True)
+                                    self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True) +
+                                    self.cost_helper.calculate_travel_consumption(vessel, trade.destination_port, dropoff_right, False) -
+                                    self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, dropoff_right, True)
                                 )
                             else:
-                                gas_increase_travel += self.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True)
+                                gas_increase_travel += self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True)
 
                         gas_increase_loading = vessel.get_loading_consumption(time_to_load)
                         gas_increase_unloading = vessel.get_unloading_consumption(time_to_load)
@@ -185,7 +196,7 @@ class BruteScheduleGenerator:
                             
                 except Exception as e:
                     print(f"Warning: Error processing schedule option: {e}")
-                    continue
+                    raise e
 
 
         return cheapest_schedule, cheapest_schedule_cost_increase, chosen_pickup_idx, chosen_dropoff_idx,cheapest_schedule_deque
