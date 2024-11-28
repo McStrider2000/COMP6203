@@ -29,15 +29,15 @@ class BruteScheduleGenerator(CostEstimator):
             cheapest_schedule = None
             lowest_cost_increase = float('inf')
 
-            orginal_lowest_cost_increase = float('inf')
+            # orginal_lowest_cost_increase = float('inf')
             
             for vessel in self.company.fleet:
                 curr_schedule = schedules.get(vessel, vessel.schedule)
-                original_schedule = vessel.schedule
+                # original_schedule = vessel.schedule
                 vessel_schedule, cost_increase = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel)
 
-                original_vessel_schedule, original_cost_increase = self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
-                orginal_lowest_cost_increase= min(orginal_lowest_cost_increase, original_cost_increase)
+                # original_vessel_schedule, original_cost_increase = self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
+                # orginal_lowest_cost_increase= min(orginal_lowest_cost_increase, original_cost_increase)
                 if vessel_schedule is not None:
                     estimated_cost = self.estimate_fulfilment_cost(vessel, trade)
                     
@@ -60,8 +60,8 @@ class BruteScheduleGenerator(CostEstimator):
                         dropoff_idx = schedule_locations.index(trade.destination_port) + 1
                         tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
 
-            if lowest_cost_increase < orginal_lowest_cost_increase:
-                lowest_cost_increase = orginal_lowest_cost_increase
+            # if lowest_cost_increase < orginal_lowest_cost_increase:
+            #     lowest_cost_increase = orginal_lowest_cost_increase
 
             if cheapest_schedule is not None:
                 scheduled_trades.append(trade)
