@@ -15,31 +15,28 @@ class BruteScheduleGenerator(CostEstimator):
         super().__init__(company=company)
         self.logger = logging.getLogger(self.__class__.__name__)
 
-    def generate(self, trades: List[Trade]) -> tuple[ScheduleProposal,dict]:
+    def generate(self, trades: List[Trade]) -> ScheduleProposal:
         schedules = {}
         scheduled_trades = []
         costs = {}
+        tradesToIdxs = {}
         cost_comparisons = {}
 
         trades.sort(key=lambda x: x.earliest_drop_off)
-
-        trades_to_idxs={}
 
         for trade in trades:
             chosen_vessel = None
             cheapest_schedule = None
             lowest_cost_increase = float('inf')
-            chosen_pickup_idx=None
-            chosen_dropof_idx=None
 
             orginal_lowest_cost_increase = float('inf')
             
             for vessel in self.company.fleet:
                 curr_schedule = schedules.get(vessel, vessel.schedule)
                 original_schedule = vessel.schedule
-                vessel_schedule, cost_increase,temp_chosen_pickup_idx, temp_chosen_dropof_idx  = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel)
+                vessel_schedule, cost_increase = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel)
 
-                original_vessel_schedule, original_cost_increase, ignore , ignore2= self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
+                original_vessel_schedule, original_cost_increase = self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
                 orginal_lowest_cost_increase= min(orginal_lowest_cost_increase, original_cost_increase)
                 if vessel_schedule is not None:
                     estimated_cost = self.estimate_fulfilment_cost(vessel, trade)
@@ -48,9 +45,6 @@ class BruteScheduleGenerator(CostEstimator):
                         cheapest_schedule = vessel_schedule
                         chosen_vessel = vessel
                         lowest_cost_increase = cost_increase
-                        chosen_pickup_idx=temp_chosen_pickup_idx
-                        chosen_dropof_idx=temp_chosen_dropof_idx
-                        
                         
                         cost_comparisons[trade] = {
                             'detailed_cost': cost_increase,
@@ -58,7 +52,13 @@ class BruteScheduleGenerator(CostEstimator):
                             'difference': estimated_cost - cost_increase,
                             'difference_percentage': ((estimated_cost - cost_increase) / cost_increase) * 100 if cost_increase > 0 else 0
                         }
-                    
+                        
+                        schedule_locations = vessel_schedule._get_node_locations()
+                        schedule_locations = [schedule_locations[i] for i in range(0, len(schedule_locations), 2)]
+                        
+                        pickup_idx = schedule_locations.index(trade.origin_port) + 1
+                        dropoff_idx = schedule_locations.index(trade.destination_port) + 1
+                        tradesToIdxs[trade] = (pickup_idx, dropoff_idx)
 
             if lowest_cost_increase < orginal_lowest_cost_increase:
                 lowest_cost_increase = orginal_lowest_cost_increase
@@ -67,17 +67,14 @@ class BruteScheduleGenerator(CostEstimator):
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = cheapest_schedule
                 costs[trade] = lowest_cost_increase
-                trades_to_idxs[trade] = (chosen_vessel,chosen_pickup_idx, chosen_dropof_idx)
 
         # Using the static PrettyPrinter class instead of instance method
-        return ScheduleProposal(schedules, scheduled_trades, costs), trades_to_idxs
+        return ScheduleProposal(schedules, scheduled_trades, costs)
 
     def find_cheapest_schedule(self, schedule: Schedule, trade: Trade, vessel: VesselWithEngine):
         insertion_points = schedule.get_insertion_points()
         cheapest_schedule = None
         cheapest_schedule_cost_increase = float('inf')
-        chosen_pickup_idx = None
-        chosen_dropoff_idx = None
         
         for i in range(len(insertion_points)):
             idx_pick_up = insertion_points[i]
@@ -156,14 +153,12 @@ class BruteScheduleGenerator(CostEstimator):
                         if cost_increase < cheapest_schedule_cost_increase:
                             cheapest_schedule = schedule_option
                             cheapest_schedule_cost_increase = cost_increase
-                            chosen_pickup_idx = idx_pick_up
-                            chosen_dropoff_idx = idx_drop_off
                             
                 except Exception as e:
                     print(f"Warning: Error processing schedule option: {e}")
                     continue
 
-        return cheapest_schedule, cheapest_schedule_cost_increase, chosen_pickup_idx, chosen_dropoff_idx
+        return cheapest_schedule, cheapest_schedule_cost_increase
 
     def calc_time_to_travel(self, vessel, location_a, location_b):
         distance_to_pickup = self.company.headquarters.get_network_distance(
@@ -172,7 +167,7 @@ class BruteScheduleGenerator(CostEstimator):
         return time_to_pick_up
 
     def get_ports_around_insertion(self, schedule, vessel, idx_both):
-        schedule_locations = self.company.vessel_schedule_locations[vessel]
+        schedule_locations = self._get_schedule_locations(schedule)
         max_insertion = max(schedule.get_insertion_points())
         
         if idx_both == 1:
@@ -185,7 +180,7 @@ class BruteScheduleGenerator(CostEstimator):
             return schedule_locations[left_idx], schedule_locations[right_idx]
 
     def get_ports_around_insertion_pair(self, schedule: Schedule, vessel: VesselWithEngine, idx_pickup, idx_dropoff):
-        schedule_locations = self.company.vessel_schedule_locations[vessel]
+        schedule_locations = self._get_schedule_locations(schedule)
         max_insertion = max(schedule.get_insertion_points())
         
         pickup_ports = self._get_insertion_ports(schedule_locations, vessel, idx_pickup, max_insertion)
@@ -193,6 +188,9 @@ class BruteScheduleGenerator(CostEstimator):
         
         return pickup_ports + dropoff_ports
 
+    def _get_schedule_locations(self, schedule: Schedule):
+        locations = schedule._get_node_locations()
+        return [locations[i] for i in range(0, len(locations), 2)]
     
     def _get_insertion_ports(self, schedule_locations, vessel: VesselWithEngine, idx, max_insertion):
         if idx == 1:
