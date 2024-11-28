@@ -117,16 +117,25 @@ class MyCompany(TradingCompany):
             
             self.logger.info(f"Adding trade {trade} to vessel {vessel.name} at pickup_idx={pickup_idx}, delivery_idx={delivery_idx}")
 
+
             q = self.vessel_schedule_locations[vessel]
-  
-            q.insert(2*(pickup_idx - 1), trade.origin_port)
-            q.insert(2*(pickup_idx - 1), trade.origin_port)
+            difference = 0
+            if len(q) %2 != 0:
+                difference = -1
+
+            q.insert(2*(delivery_idx - 1)+difference , trade.destination_port)
+            q.insert(2*(delivery_idx - 1)+difference , trade.destination_port)
+
+
+
+            q.insert(2*(pickup_idx - 1)+difference , trade.origin_port)
+            q.insert(2*(pickup_idx - 1)+difference , trade.origin_port)
+            print(q)
             
 
-            adjusted_delivery_idx =2*( delivery_idx-1) + 2
+            # adjusted_delivery_idx =2*( delivery_idx-1) + 2
 
-            q.insert(adjusted_delivery_idx , trade.destination_port)
-            q.insert(adjusted_delivery_idx , trade.destination_port)
+
 
         for vessel in self.fleet:
             if (list(self.vessel_schedule_locations[vessel])!=vessel.schedule._get_node_locations()):
