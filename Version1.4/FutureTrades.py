@@ -1,4 +1,4 @@
-from typing import Union, Tuple, Optional, Dict
+from typing import Tuple, Optional, Dict
 
 from mable.cargo_bidding import TradingCompany
 from mable.competition.information import CompanyHeadquarters
@@ -41,7 +41,7 @@ class FutureTradesHelper:
         return trade_dict
 
     @staticmethod
-    def find_closest_trade(starting_point : Union[Port, str], future_trades : list[Trade], hq : CompanyHeadquarters) -> Tuple[Optional[Trade], float]:
+    def find_closest_trade(starting_point : Port, future_trades : list[Trade], hq : CompanyHeadquarters) -> Tuple[Optional[Trade], float]:
         if not future_trades:
             return None, float('inf')
 

@@ -1,11 +1,15 @@
+import sys
+from collections import deque
 from logging import Logger
 
+from mable.extensions.world_ports import LatLongPort
 from mable.shipping_market import Trade
 from mable.cargo_bidding import TradingCompany
+from mable.simulation_space import Location, Port, OnJourney
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine
-from typing import List, Dict, Any, Tuple
+from typing import List, Any, Tuple
 import logging
 
 from numpy.f2py.auxfuncs import throw_error
@@ -20,7 +24,7 @@ class BruteScheduleGenerator:
     company: MyCompany
     cost_helper: CostEstimator
     future_trade_helper: FutureTradesHelper
-    temp_vessel_schedule_locations: dict[Any, Any]
+    temp_vessel_schedule_locations: dict[VesselWithEngine, deque[Location]]
 
     def __init__(self, company: MyCompany, future_trades_helper: FutureTradesHelper):
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -31,10 +35,10 @@ class BruteScheduleGenerator:
 
 
     def generate(self, trades: List[Trade]) -> tuple[ScheduleProposal,dict]:
-        schedules: dict[Any | None, Schedule] = dict()
+        schedules: dict[VesselWithEngine, Schedule] = dict()
         scheduled_trades: list[Trade] = []
         costs: dict[Trade, float] = dict()
-        cost_comparisons: dict[Trade, dict[str, float | int]] = dict()
+        cost_comparisons: dict[Trade, dict[str, float | int | dict]] = dict()
 
         self.temp_vessel_schedule_locations = {vessel: q.copy() for vessel, q in self.company.vessel_schedule_locations.items()}
 
@@ -43,38 +47,44 @@ class BruteScheduleGenerator:
 
         trades.sort(key=lambda x: x.earliest_drop_off)
 
-        trades_to_idxs: dict[Trade, tuple[Any | None, int | None, int | None]] = dict()
+        trades_to_idxs: dict[Trade, tuple[VesselWithEngine, None | int,  None | int]] = dict()
 
         for trade in trades:
-            chosen_vessel : VesselWithEngine = None
-            cheapest_schedule = None
-            lowest_cost_increase = float('inf')
-            chosen_pickup_idx=None
-            chosen_dropof_idx=None
-            chosen_vessel_schedule = None
+            chosen_vessel : VesselWithEngine | None = None
+            cheapest_schedule : Schedule | None = None
+            lowest_cost_increase : float = float('inf')
+            chosen_pickup_idx : int | None = None
+            chosen_dropoff_idx : int | None = None
+            chosen_vessel_schedule : Schedule | None = None
 
             # orginal_lowest_cost_increase = float('inf')
-            
+
             for vessel in self.company.fleet:
-                curr_schedule = schedules.get(vessel, vessel.schedule)
-                current_vessel_schedule = self.temp_vessel_schedule_locations[vessel]
-                if len(current_vessel_schedule)>26:
+                curr_schedule : Schedule | Any = schedules.get(vessel, vessel.schedule)
+                current_vessel_schedule_deque : deque[Location] = self.temp_vessel_schedule_locations[vessel]
+                if len(current_vessel_schedule_deque)>26:
                     continue
                 # original_schedule = vessel.schedule
-                vessel_schedule, cost_increase,temp_chosen_pickup_idx, temp_chosen_dropof_idx, outputed_vessel_schedule  = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel, current_vessel_schedule)
+
+                vessel_schedule: Schedule | None
+                cost_increase: float
+                temp_chosen_pickup_idx: int | None
+                temp_chosen_dropoff_idx: int | None
+                outputed_vessel_schedule: Any | None
+                vessel_schedule, cost_increase,temp_chosen_pickup_idx, temp_chosen_dropoff_idx, outputed_vessel_schedule  = self.find_cheapest_schedule(curr_schedule.copy(), trade, vessel, current_vessel_schedule_deque)
 
                 # original_vessel_schedule, original_cost_increase, ignore , ignore2= self.find_cheapest_schedule(original_schedule.copy(), trade, vessel)
                 # orginal_lowest_cost_increase= min(orginal_lowest_cost_increase, original_cost_increase)
                 if vessel_schedule is not None:
-                    estimated_cost = self.cost_helper.estimate_fulfilment_cost(vessel, trade)
+                    estimated_cost: float = self.cost_helper.estimate_fulfilment_cost(vessel, trade)
                     
                     if cost_increase < lowest_cost_increase:
-                        cheapest_schedule = vessel_schedule
-                        chosen_vessel = vessel
-                        lowest_cost_increase = cost_increase
-                        chosen_pickup_idx=temp_chosen_pickup_idx
-                        chosen_dropof_idx=temp_chosen_dropof_idx
-                        chosen_vessel_schedule = outputed_vessel_schedule
+                        cheapest_schedule : Schedule = vessel_schedule
+                        chosen_vessel : VesselWithEngine = vessel
+                        lowest_cost_increase : float = cost_increase
+                        chosen_pickup_idx : int = temp_chosen_pickup_idx
+                        chosen_dropoff_idx : int = temp_chosen_dropoff_idx
+                        chosen_vessel_schedule : deque[Location] = outputed_vessel_schedule
                         
                         
                         cost_comparisons[trade] = {
@@ -100,38 +110,41 @@ class BruteScheduleGenerator:
                 print("Profit factor for trade",self.company.get_profit_factor_for_trade(trade))
                 lowest_cost_increase *= self.company.get_profit_factor_for_trade(trade)
                 costs[trade] = lowest_cost_increase
-                trades_to_idxs[trade] = (chosen_vessel,chosen_pickup_idx, chosen_dropof_idx)
+                trades_to_idxs[trade] = (chosen_vessel,chosen_pickup_idx, chosen_dropoff_idx)
                 self.temp_vessel_schedule_locations[chosen_vessel] = chosen_vessel_schedule
 
         # Using the static PrettyPrinter class instead of instance method
         return ScheduleProposal(schedules, scheduled_trades, costs), trades_to_idxs
 
-    def find_cheapest_schedule(self, schedule: Schedule, trade: Trade, vessel: VesselWithEngine,current_vessel_schedule):
-        insertion_points = schedule.get_insertion_points()
-        cheapest_schedule = None
-        cheapest_schedule_cost_increase = float('inf')
-        chosen_pickup_idx = None
-        chosen_dropoff_idx = None
-        cheapest_schedule_deque = None
+    def find_cheapest_schedule(self, schedule: Schedule, trade: Trade, vessel: VesselWithEngine, current_vessel_schedule: deque) -> tuple[Schedule | deque[Location] | None, float, float | None, float | None, Schedule | deque[Location] | None ]:
+        insertion_points: list[int] = schedule.get_insertion_points()
+        cheapest_schedule : Schedule | None = None
+        cheapest_schedule_cost_increase : float = float('inf')
+        chosen_pickup_idx : int | None = None
+        chosen_dropoff_idx : int | None = None
+        cheapest_schedule_deque : deque | None = None
 
 
         
         for i in range(len(insertion_points)):
-            idx_pick_up = insertion_points[i]
-            possible_drop_offs = insertion_points[i:]
+            idx_pick_up : int = insertion_points[i]
+            possible_drop_offs : list[int] = insertion_points[i:]
             for j in range(len(possible_drop_offs)):
-                idx_drop_off = possible_drop_offs[j]
-                schedule_option = schedule.copy()
-                current_vessel_schedule_option = current_vessel_schedule.copy()
+                idx_drop_off : int = possible_drop_offs[j]
+                schedule_option : Schedule = schedule.copy()
+                current_vessel_schedule_option : deque = current_vessel_schedule.copy()
                 try:
                     schedule_option.add_transportation(trade, idx_pick_up, idx_drop_off)
                     self.temp_add_vessel_schedule_locations(trade, current_vessel_schedule_option, idx_pick_up, idx_drop_off)
                     if schedule_option.verify_schedule():
-                        overall_time_increase = schedule_option.completion_time() - schedule.completion_time()
-                        time_to_trade = 0 
-                        time_to_load = vessel.get_loading_time(trade.cargo_type, trade.amount)
+                        overall_time_increase: float = schedule_option.completion_time() - schedule.completion_time()
+                        time_to_trade : float = 0
+                        gas_increase_travel : float = 0
+                        time_to_load : float = vessel.get_loading_time(trade.cargo_type, trade.amount)
                         
                         if idx_drop_off == idx_pick_up:
+                            left : Port
+                            right : Port
                             left, right = self.get_ports_around_insertion(schedule, vessel, idx_pick_up,current_vessel_schedule)
                             # Handle case where right is None (end of schedule)
                             if right is None:
@@ -150,6 +163,10 @@ class BruteScheduleGenerator:
                                                     self.cost_helper.calculate_travel_consumption(vessel, trade.origin_port, trade.destination_port, True) -
                                                     self.cost_helper.calculate_travel_consumption(vessel, left, right, False))
                         else:
+                            pickup_left: Port | None
+                            pickup_right: Port | None
+                            dropoff_left: Port | None
+                            dropoff_right: Port | None
                             pickup_left, pickup_right, dropoff_left, dropoff_right = self.get_ports_around_insertion_pair(schedule, vessel, idx_pick_up, idx_drop_off,current_vessel_schedule)
                             
                             # Calculate time components with None checks
@@ -184,15 +201,13 @@ class BruteScheduleGenerator:
                             else:
                                 gas_increase_travel += self.cost_helper.calculate_travel_consumption(vessel, dropoff_left, trade.destination_port, True)
 
-                        gas_increase_loading = vessel.get_loading_consumption(time_to_load)
-                        gas_increase_unloading = vessel.get_unloading_consumption(time_to_load)
+                        gas_increase_loading : float = vessel.get_loading_consumption(time_to_load)
+                        gas_increase_unloading : float = vessel.get_unloading_consumption(time_to_load)
 
-
-                        
-                        cost_increase = vessel.get_cost(gas_increase_travel + gas_increase_loading + gas_increase_unloading)
+                        cost_increase: float = vessel.get_cost(gas_increase_travel + gas_increase_loading + gas_increase_unloading)
                         
                         if schedule.completion_time() != 0:
-                            cost_increase += max(0,vessel.get_cost(vessel.get_idle_consumption(overall_time_increase - time_to_trade)))
+                            cost_increase += max(0.0,vessel.get_cost(vessel.get_idle_consumption(overall_time_increase - time_to_trade)))
                         
                         if cost_increase < cheapest_schedule_cost_increase:
                             cheapest_schedule = schedule_option
@@ -207,50 +222,54 @@ class BruteScheduleGenerator:
                     raise e
 
 
-        return cheapest_schedule, cheapest_schedule_cost_increase, chosen_pickup_idx, chosen_dropoff_idx,cheapest_schedule_deque
+        return cheapest_schedule, cheapest_schedule_cost_increase, chosen_pickup_idx, chosen_dropoff_idx, cheapest_schedule_deque
 
-    def calc_time_to_travel(self, vessel, location_a, location_b):
-        distance_to_pickup = self.company.headquarters.get_network_distance(
+    def calc_time_to_travel(self, vessel : VesselWithEngine, location_a : Port, location_b : Port) -> float:
+        distance_to_pickup : float  = self.company.headquarters.get_network_distance(
             location_a, location_b)
-        time_to_pick_up = vessel.get_travel_time(distance_to_pickup)
+        time_to_pick_up: float = vessel.get_travel_time(distance_to_pickup)
         return time_to_pick_up
 
-    def get_ports_around_insertion(self, schedule, vessel, idx_both,current_vessel_schedule):
-        schedule_locations = self._get_schedule_locations(current_vessel_schedule)
-        max_insertion = max(schedule.get_insertion_points())
+    def get_ports_around_insertion(self, schedule : Schedule, vessel : VesselWithEngine, idx_both : int, current_vessel_schedule : deque) -> Tuple[Location | OnJourney | Port, Location | OnJourney | Port | None]:
+        schedule_locations : list[Port] = self._get_schedule_locations(current_vessel_schedule)
+        max_insertion : int = max(schedule.get_insertion_points())
         
         if idx_both == 1:
             return vessel.location, schedule_locations[0] if schedule_locations else None
         elif idx_both == max_insertion:
             return schedule_locations[-1] if schedule_locations else vessel.location, None
         else:
-            left_idx = idx_both - 2
-            right_idx = idx_both - 1
+            left_idx: int = idx_both - 2
+            right_idx : int = idx_both - 1
             return schedule_locations[left_idx], schedule_locations[right_idx]
 
-    def get_ports_around_insertion_pair(self, schedule: Schedule, vessel: VesselWithEngine, idx_pickup, idx_dropoff,current_vessel_schedule):
-        schedule_locations = self._get_schedule_locations(current_vessel_schedule)
-        max_insertion = max(schedule.get_insertion_points())
+    def get_ports_around_insertion_pair(self, schedule: Schedule, vessel: VesselWithEngine, idx_pickup: int, idx_dropoff: int, current_vessel_schedule: deque[Location]) -> object:
+        schedule_locations : list[Port] = self._get_schedule_locations(current_vessel_schedule)
+        max_insertion : int = max(schedule.get_insertion_points())
         
-        pickup_ports = self._get_insertion_ports(schedule_locations, vessel, idx_pickup, max_insertion)
-        dropoff_ports = self._get_insertion_ports(schedule_locations, vessel, idx_dropoff, max_insertion)
+        pickup_ports: tuple[Location | OnJourney, Any | None] | tuple[Location | OnJourney | Any, None] | tuple[Any, Any] = self._get_insertion_ports(schedule_locations, vessel, idx_pickup, max_insertion)
+        dropoff_ports: tuple[Location | OnJourney, Any | None] | tuple[Location | OnJourney | Any, None] | tuple[Any, Any] = self._get_insertion_ports(schedule_locations, vessel, idx_dropoff, max_insertion)
         
         return pickup_ports + dropoff_ports
-    
-    def _get_schedule_locations(self, current_vessel_schedule):
-        locations = current_vessel_schedule
+
+    @staticmethod
+    def _get_schedule_locations(current_vessel_schedule_deque : deque) -> list[Port]:
+        locations : deque = current_vessel_schedule_deque
         return [locations[i] for i in range(0, len(locations), 2)]
-    
-    def _get_insertion_ports(self, schedule_locations, vessel: VesselWithEngine, idx, max_insertion):
+
+    @staticmethod
+    def _get_insertion_ports(schedule_locations: list[Port], vessel: VesselWithEngine, idx: int, max_insertion: int) -> Tuple[Location | OnJourney, Port | None]:
         if idx == 1:
-            return (vessel.location, schedule_locations[0] if schedule_locations else None)
+            return vessel.location, schedule_locations[0] if schedule_locations else None
         elif idx == max_insertion:
-            return (schedule_locations[-1] if schedule_locations else vessel.location, None)
+            return schedule_locations[-1] if schedule_locations else vessel.location, None
         else:
-            return (schedule_locations[idx - 2], schedule_locations[idx - 1])
+            return schedule_locations[idx - 2], schedule_locations[idx - 1]
         
 
-    def temp_add_vessel_schedule_locations(self,trade, current_vessel_schedule_option, pickup_idx, delivery_idx):            
+    @staticmethod
+    def temp_add_vessel_schedule_locations(trade: Trade, current_vessel_schedule_option : deque, pickup_idx: int,
+                                           delivery_idx: int):
         # self.logger.info(f"Adding trade {trade} to vessel {vessel.name} at pickup_idx={pickup_idx}, delivery_idx={delivery_idx}")
 
         q = current_vessel_schedule_option
