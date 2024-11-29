@@ -10,7 +10,7 @@ class OpponentTracker:
     def __init__(self, company: TradingCompany):
         self.company = company
         # Define the target levels we want to hit
-        self.target_levels = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 6, 7, 8, 9, 10]
+        self.target_levels = [1, 1.5, 2, 2.5, 3, 3.5, 4, 5, 7, 10]
         # Track current exact profit factor for each distance range
         self.distance_ranges = [
             (1, {
@@ -19,21 +19,21 @@ class OpponentTracker:
                 'consecutive_wins': 0,
                 'base_increment': 0.7
             }),
-            (4, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),    
-            (10, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (20, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (40, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (80, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (160, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (320, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (640, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (1280, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (1540, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (1800, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (2560, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (3000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (4000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
-            (5120, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (4, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),    
+            (10, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (20, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (40, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (80, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (160, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (320, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (640, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (1280, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (1540, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (1800, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (2560, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (3000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (4000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
+            (5120, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.3}),
         ]  
         
         self.trade_distance = {}
@@ -159,7 +159,7 @@ class OpponentTracker:
             state['consecutive_losses'] += 1
             
             # Only drop a level if we've lost twice in a row
-            if state['consecutive_losses'] >= 9:
+            if state['consecutive_losses'] >= 6:
                 # Find current level index
                 current_level_index = 0
                 for i, level in enumerate(self.target_levels):
