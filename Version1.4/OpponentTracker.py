@@ -14,26 +14,26 @@ class OpponentTracker:
         # Track current exact profit factor for each distance range
         self.distance_ranges = [
             (1, {
-                'factor': 1.2, 
+                'factor': 1.4, 
                 'consecutive_losses': 0,
                 'consecutive_wins': 0,
-                'base_increment': 0.4
+                'base_increment': 0.7
             }),
-            (4, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),    
-            (10, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (20, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (40, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (80, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (160, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (320, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (640, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (1280, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (1540, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (1800, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (2560, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (3000, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (4000, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
-            (5120, {'factor': 1.2, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.4}),
+            (4, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),    
+            (10, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (20, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (40, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (80, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (160, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (320, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (640, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (1280, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (1540, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (1800, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (2560, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (3000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (4000, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
+            (5120, {'factor': 1.4, 'consecutive_losses': 0, 'consecutive_wins': 0, 'base_increment': 0.7}),
         ]  
         
         self.trade_distance = {}
