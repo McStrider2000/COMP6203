@@ -1,10 +1,13 @@
+from collections import deque
+from logging import Logger
+
 from mable.cargo_bidding import TradingCompany
 from mable.extensions.fuel_emissions import VesselWithEngine
 from mable.transport_operation import Bid
 from mable.shipping_market import Trade, AuctionLedger
 from mable.transport_operation import ScheduleProposal
 from mable.shipping_market import Contract
-from typing import List
+from typing import List, Dict, Any
 
 import mable.extensions.cargo_distributions
 import mable.event_management
@@ -16,6 +19,9 @@ from OpponentTracker import OpponentTracker
 import collections
 
 class MyCompany(TradingCompany):
+    logger: Logger
+    vessel_schedule_locations: dict[VesselWithEngine, deque[Any]]
+
     def __init__(self, fleet: List[VesselWithEngine], name: str):
         super().__init__(fleet, name)
         self.logger = logging.getLogger(self.__class__.__name__)
