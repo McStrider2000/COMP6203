@@ -1,10 +1,13 @@
 import sys
 
 from mable.cargo_bidding import TradingCompany
+from mable.event_management import CargoTransferEvent
+from mable.extensions.cargo_distributions import TimeWindowArrivalEvent
 from mable.transport_operation import ScheduleProposal, Bid
 from mable.examples import environment, fleets, companies
 from mable.transportation_scheduling import Schedule
 from dataclasses import dataclass
+from mable.simulation_space import Location, Port, OnJourney
 
 import random
 from typing import List, Tuple
@@ -22,25 +25,42 @@ class MyCompany(TradingCompany):
         super().__init__(fleet, name)
         self._future_trades = None
         self._current_vessel_instructions = {}
+        # store all received trade time windows, for reference
+        self._trade_time_windows = {} # Key: Trade, Value: Tuple[earliest_pickup, latest_pickup, earliest_dropoff, latest_dropoff]
 
     def pre_inform(self, trades, time):
         self._future_trades = trades
 
     def inform(self, trades, *args, **kwargs):
         for vessel in self.fleet:
-            print("-------------------INFORM-----------------", vessel.name, "\n")
+            print("-------------------INFORM-----------------")
+            print("Vessel: ", vessel)
             print("Journey Log")
             i = 0
             for item in vessel.journey_log:
                 i += 1
                 print("    ", "Journey Log Item: ", i)
                 print("    ", item)
+                if isinstance(item, CargoTransferEvent):
+                    print("    ", "Cargo Transfer Event Detected")
+                    trade = item.trade
+                    # print time windows
+                    print("    ", "Time Windows:")
+                    print("    ", "Earliest Pickup:", trade.earliest_pickup_clean)
+                    print("    ", "Latest Pickup:", trade.latest_pickup_clean)
+                    print("    ", "Earliest Dropoff:", trade.earliest_drop_off_clean)
+                    print("    ", "Latest Dropoff:", trade.latest_drop_off_clean)
+                else:
+                    # print event type
+                    print(type(item).__name__)
             print("Schedule of vessel", vessel.schedule)
             i = 0
             for item in vessel.schedule:
                 i += 1
                 print("    ", "Schedule Item: ", i)
                 print("    ", item)
+
+
             # print("Node Locations", vessel.schedule._get_node_locations())
             # print("Insertion points", vessel.schedule.get_insertion_points())
             print("Vehicle contents", vessel.current_load('Oil'))
@@ -104,8 +124,40 @@ class MyCompany(TradingCompany):
 
         # First step is to prepare data - we want to create a full catalog of trades, as well as find the state of the vessels
         trades_catalog = []
-        required_trades = {} # Dict[vessel, List[Trade]] (incomplete jobs)
-        pass
+        incomplete_trades = {vessel: [] for vessel in vessels} # Dict[vessel, List(Trade)] (incomplete jobs)
+        locations = {} #  Dict[vessel, Location] (current location of vessel OR next location if on journey)
+
+        # check journey logs for incomplete trades
+        for vessel in vessels:
+            journey_log = vessel.journey_log
+            for event in journey_log:
+                if isinstance(event, CargoTransferEvent):
+                    trade = event.trade
+                    if event.is_pickup:
+                        incomplete_trades[vessel].append(trade)
+                    else: # drop off
+                        incomplete_trades[vessel].remove(trade)
+
+        # Look at future schedules and add unstarted trades to the catalog + also set the location
+        for vessel in vessels:
+            if type(vessel.location) == Port:
+                locations[vessel] = vessel.location
+            elif type(vessel.location) == OnJourney:
+                locations[vessel] = vessel.location.destination
+            for event in vessel.schedule:
+                if isinstance(event, CargoTransferEvent):
+                    trade = event.trade
+                    if event.is_pickup:
+                        trades_catalog.append(trade)
+
+        # Add the new trades to the catalog as well
+        trades_catalog.extend(trades)
+
+
+
+
+
+
 
 
         
