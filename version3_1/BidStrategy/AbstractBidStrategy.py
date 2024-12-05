@@ -3,17 +3,17 @@ from mable.shipping_market import Trade, AuctionLedger, Contract
 from mable.transport_operation import Bid
 from abc import ABC, abstractmethod
 from typing import List
-from logging import Logger
+import logging
 
 
 class AbstractBidStrategy(ABC):
 
     def __init__(self, company: TradingCompany, **kwargs):
         self.company = company
-        self.logger = Logger.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
     
     @abstractmethod
-    def get_bids(schedule):
+    def get_bids(trades: List[Trade]) -> List[Bid]:
         pass
 
     def pre_inform(self, trades: List[Trade], time: int) -> None:

@@ -4,16 +4,16 @@ from mable.transport_operation import Bid
 from mable.shipping_market import Trade, AuctionLedger
 from mable.shipping_market import Contract
 from mable.competition.information import CompanyHeadquarters
-from mable.extensions.cargo_distributions import TimeWindowArrivalEvent
-from mable.event_management import CargoTransferEvent
-from mable.simulation_space import Location
 from BidStrategy import AbstractBidStrategy
-from typing import Any, List, Tuple
-from collections import deque
+from typing import List
 import logging
 
 from ScheduleGenerator.AbstractScheduleGenerator import AbstractScheduleGenerator
+from ScheduleGenerator.BruteScheduleGenerator import BruteScheduleGenerator
 from OpponentSimulation.AbstractOpponentSimulation import AbstractOpponentSimulation
+from OpponentSimulation.DumbSimulator import DumbSimulation
+from BidStrategy.AbstractBidStrategy import AbstractBidStrategy
+from BidStrategy.BasicStrategy import BasicStrategy
 
 class MyCompany(TradingCompany):
     logger: logging.Logger
@@ -27,7 +27,6 @@ class MyCompany(TradingCompany):
     bid_strategy: AbstractBidStrategy
     opponent_simulation: AbstractOpponentSimulation
     schedule_generator: AbstractScheduleGenerator
-    vessel_journey_log_update: dict[VesselWithEngine, int]
 
     def __init__(self, fleet: List[VesselWithEngine], name: str):
         super().__init__(fleet, name)
@@ -37,9 +36,9 @@ class MyCompany(TradingCompany):
         self.future_trades = []
         
         # Extension State
-        self.schedule_generator = AbstractScheduleGenerator(company=self)
-        self.opponent_simulation = AbstractOpponentSimulation(company=self)
-        self.bid_strategy = AbstractBidStrategy(company=self)
+        self.schedule_generator = BruteScheduleGenerator(company=self)
+        self.opponent_simulation = DumbSimulation(company=self)
+        self.bid_strategy = BasicStrategy(company=self)
 
     def pre_inform(self, trades: List[Trade], time: int):
         # Internal update
@@ -52,18 +51,20 @@ class MyCompany(TradingCompany):
 
     def inform(self, trades: List[Trade]) -> List[Bid]:
         # Internal update
+        proposed_scheduling = self.propose_schedules(trades)
 
         # Inform extensions
         self.schedule_generator.inform(trades)
         self.opponent_simulation.inform(trades)
         self.bid_strategy.inform(trades)
-
+        
         # Return the bids
-        return self.bid_strategy.get_bids()
+        return self.bid_strategy.get_bids(trades)
     
     def recieve(self, contracts: List[Contract], auction_ledger: AuctionLedger):
         # Internal update
         proposal = self.propose_schedules([contract.trade for contract in contracts])
+        
         rejected_trades = self.apply_schedules(proposal.schedules)
         if rejected_trades and len(rejected_trades) > 0:
             self.logger.error(f"Rejected trades: {rejected_trades}")
@@ -74,5 +75,4 @@ class MyCompany(TradingCompany):
         self.bid_strategy.recieve(contracts, auction_ledger)
 
     def propose_schedules(self, trades):
-        schedule = self.schedule_generator.generate(self, trades)
-        return schedule
+        return self.schedule_generator.generate(self, trades)

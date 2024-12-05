@@ -9,12 +9,13 @@ import subprocess
 from MyCompany import MyCompany
 
 def build_specification():
-    # TODO: Implement the build_specification function
-    pass
+    specifications_builder = environment.get_specification_builder(environment_files_path="../resources")
+    specifications_builder.add_company(MyCompany.Data(MyCompany, fleets.example_fleet_1(), "Shipping Corp Ltd."))
+    sim = environment.generate_simulation(specifications_builder)
+    sim.run()
 
 
 def main(build_specification: Callable[[], None], directory: str = '.'):
-
     # First remove all json files in the current directory
     for root, _, files in os.walk(directory):
         for file in files:

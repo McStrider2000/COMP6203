@@ -1,4 +1,3 @@
-
 from dataclasses import dataclass
 from collections import deque
 from mable.shipping_market import Trade
@@ -6,15 +5,14 @@ from mable.simulation_space import Location, Port, OnJourney
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine
-from typing import Any, Deque, List, NamedTuple, Optional, Tuple, Union
+from typing import Any, Deque, NamedTuple, Optional, Tuple, Union
 
-from AbstractScheduleGenerator import AbstractScheduleGenerator
-from Util import get_schedule_as_deque, calc_fuel_to_travel, calc_time_to_fulfill, calc_time_to_travel
+from ScheduleGenerator.AbstractScheduleGenerator import AbstractScheduleGenerator
+from Util import get_schedule_as_deque, calc_fuel_to_travel, calc_time_to_travel
+
 
 
 class BruteScheduleGenerator(AbstractScheduleGenerator):
-
-    vessel_schedule_locations: dict[VesselWithEngine, deque[Any]]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,6 +61,7 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                 # If the cheapr schedule is better than the current best result, update the best result
                 if cheapest_schedule_result.vessel_schedule is not None and (
                         cheapest_schedule_result.cost_increase < best_result.cost_increase):
+                    chosen_vessel = vessel
                     best_result = cheapest_schedule_result
 
             # If the best result isn't the default, add the trade to the vessel schedule
@@ -73,14 +72,13 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
 
         return ScheduleProposal(schedules, scheduled_trades, costs)
 
-    # TODO ALL BELOW
-
-    @dataclass
+    
     class CheapestScheduleResult(NamedTuple):
         vessel_schedule: Optional[Union[Schedule, deque[Location]]]
         cost_increase: float
         outputed_vessel_schedule: Optional[Union[Schedule, deque[Location]]]
-
+        
+    # TODO ALL BELOW
     def find_cheapest_schedule(
         self,
         schedule: Schedule,

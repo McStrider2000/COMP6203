@@ -4,7 +4,7 @@ from mable.cargo_bidding import TradingCompany
 from mable.transport_operation import ScheduleProposal
 from abc import ABC, abstractmethod
 from typing import List
-from logging import Logger
+import logging
 
 
 class AbstractScheduleGenerator(ABC):
@@ -14,7 +14,7 @@ class AbstractScheduleGenerator(ABC):
 
     def __init__(self, company: TradingCompany, **kwargs):
         self.company = company
-        self.logger = Logger.getLogger(self.__class__.__name__)
+        self.logger = logging.getLogger(self.__class__.__name__)
         
     @abstractmethod
     def generate(self, company: TradingCompany, trades: List[Trade]) -> ScheduleProposal:
