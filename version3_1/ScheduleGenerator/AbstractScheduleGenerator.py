@@ -17,7 +17,7 @@ class AbstractScheduleGenerator(ABC):
         self.logger = Logger.getLogger(self.__class__.__name__)
         
     @abstractmethod
-    def generate(company: TradingCompany, trades: List[Trade]) -> ScheduleProposal:
+    def generate(self, company: TradingCompany, trades: List[Trade]) -> ScheduleProposal:
         pass
 
     def pre_inform(self, trades: List[Trade], time: int) -> None:

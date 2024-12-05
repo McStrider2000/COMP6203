@@ -1,7 +1,13 @@
-from typing import Optional
+from collections import deque
+from typing import List, Optional, Tuple
 from mable.competition.information import CompanyHeadquarters
 from mable.shipping_market import Trade
 from mable.extensions.fuel_emissions import VesselWithEngine
+from mable.simulation_space import Location
+from mable.transportation_scheduling import Schedule
+import logging
+
+LOGGER = logging.getLogger(__name__)
 
 def calc_fuel_to_travel(
     hq: CompanyHeadquarters, 
@@ -163,3 +169,25 @@ def find_closest_trade(
     )
     distance = hq.get_network_distance(current_location, closest_trade.origin_port)
     return closest_trade, distance
+
+def get_schedule_as_deque(schedule: Schedule) -> deque[Location]:
+    """
+    Convert a schedule to a deque of locations. 
+    You may notice that locations are repeated in the deque. This is due to ships having to arrive and depart from the same location.
+    Args:
+        schedule (Schedule): The schedule to convert.
+    Returns:
+        deque[Location]: A deque containing the locations that the schedule outlines.
+    """
+    simple_schedule: List[Tuple[str, Trade]] = schedule.get_simple_schedule()
+    locations = []
+    for key, trade in simple_schedule:
+        if key == 'PICK_UP':
+            locations.append(trade.origin_port)
+            locations.append(trade.origin_port)
+        elif key == 'DROP_OFF':
+            locations.append(trade.destination_port)
+            locations.append(trade.destination_port)
+        else:
+            LOGGER.error(f"Unknown key in simple schedule: {key}")
+    return deque(locations)
