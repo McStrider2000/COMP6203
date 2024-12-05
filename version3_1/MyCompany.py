@@ -25,6 +25,7 @@ class MyCompany(TradingCompany):
         self.logger = logging.getLogger(self.__class__.__name__)
         
         # Create 3 key parts
+        # TODO CHANGE THIS TO YOUR OWN IMPLEMENTATION
         self.schedule_generator = AbstractScheduleGenerator(company=self)
         self.opponent_simulation = AbstractOpponentSimulation(company=self)
         self.bid_strategy = AbstractBidStrategy(company=self)

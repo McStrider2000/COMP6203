@@ -12,6 +12,7 @@ def build_specification():
     # TODO: Implement the build_specification function
     pass
 
+
 def main(build_specification: Callable[[], None], directory: str = '.'):
 
     # First remove all json files in the current directory
@@ -36,6 +37,7 @@ def main(build_specification: Callable[[], None], directory: str = '.'):
         print(f"Failed to execute {' '.join(command)}")
     else:
         print(result.stdout)
+
 
 def setup_logging(level=logging.INFO, log_file='logs.txt'):
     logger = logging.getLogger()
@@ -62,6 +64,7 @@ def setup_logging(level=logging.INFO, log_file='logs.txt'):
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     logger.setLevel(level)
+
 
 if __name__ == "__main__":
     setup_logging(level=logging.INFO, log_file='logs.txt')

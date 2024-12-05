@@ -99,7 +99,6 @@ def calc_time_to_fulfill(
     trade: Trade,
     in_transit_trade: Optional[Trade] = None
 ) -> float:
-    total_time = 0
     """
     Calculate the time taken for a vessel to fulfill a trade. Can also account for another trade in transit.
     For in_transit_trade, we assume it has been picked up and is currently in transit.
@@ -111,6 +110,7 @@ def calc_time_to_fulfill(
     Returns:
         float: The predicted time taken for the vessel to fulfill the trade.
     """
+    total_time = 0
 
     # First append time of potental transit trade & update vessel location
     if in_transit_trade:
@@ -133,7 +133,33 @@ def calc_time_to_fulfill(
         hq, vessel, trade.origin_port, trade.destination_port)
     unloading_time = loading_time
     total_time += pick_up_time + loading_time + drop_off_time + unloading_time
-    
-    return total_time
-    
 
+    return total_time
+
+
+def find_closest_trade(
+    hq: CompanyHeadquarters,
+    current_location,
+    trades: list[Trade],
+) -> tuple[Trade, float]:
+    """
+    Find the trade with the closest pickup to the current location.
+    Args:
+        hq (CompanyHeadquarters): The company's headquarters.
+        current_location: The current location of the vessel.
+        trades (list[Trade]): The list of trades to search through.
+    Returns:
+        Trade: The closest trade to the current location.
+        float: The distance to the closest trade.
+    """
+    if not trades or len(trades) < 1:
+        return None, float('inf')
+
+    closest_trade = min(
+        trades,
+        key=lambda future_trade: hq.get_network_distance(
+            current_location, future_trade.origin_port
+        )
+    )
+    distance = hq.get_network_distance(current_location, closest_trade.origin_port)
+    return closest_trade, distance

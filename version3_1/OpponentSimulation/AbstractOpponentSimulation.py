@@ -2,16 +2,18 @@ from mable.shipping_market import Trade, AuctionLedger, Contract
 from mable.transport_operation import Bid
 from mable.competition.information import CompanyHeadquarters
 from mable.cargo_bidding import TradingCompany
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List, Dict
+from logging import Logger
 
 
 class AbstractOpponentSimulation(ABC):
 
     def __init__(self, company: TradingCompany, **kwargs):
         self.company = company
+        self.logger = Logger.getLogger(self.__class__.__name__)
 
-    @staticmethod
+    @abstractmethod
     def get_expected_bids() -> Dict[CompanyHeadquarters, List[Bid]]:
         return []
 
