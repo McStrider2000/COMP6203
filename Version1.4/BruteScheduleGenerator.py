@@ -124,8 +124,6 @@ class BruteScheduleGenerator:
         chosen_dropoff_idx : int | None = None
         cheapest_schedule_deque : deque | None = None
 
-
-        
         for i in range(len(insertion_points)):
             idx_pick_up : int = insertion_points[i]
             possible_drop_offs : list[int] = insertion_points[i:]
@@ -147,21 +145,19 @@ class BruteScheduleGenerator:
                             right : Port
                             left, right = self.get_ports_around_insertion(schedule, vessel, idx_pick_up,current_vessel_schedule)
                             # Handle case where right is None (end of schedule)
-                            if right is None:
-                                time_to_trade = (time_to_load + time_to_load + 
-                                            self.calc_time_to_travel(vessel, left, trade.origin_port) +
-                                            self.calc_time_to_travel(vessel, trade.origin_port, trade.destination_port))
-                                gas_increase_travel = (self.cost_helper.calculate_travel_consumption(vessel, left, trade.origin_port, False) +
+
+                            time_to_trade = (time_to_load + time_to_load +
+                                             self.calc_time_to_travel(vessel, left, trade.origin_port) +
+                                             self.calc_time_to_travel(vessel, trade.origin_port,
+                                                                      trade.destination_port))
+                            gas_increase_travel = (self.cost_helper.calculate_travel_consumption(vessel, left, trade.origin_port, False) +
                                                     self.cost_helper.calculate_travel_consumption(vessel, trade.origin_port, trade.destination_port, True))
-                            else:
-                                time_to_trade = (time_to_load + time_to_load +
-                                            self.calc_time_to_travel(vessel, left, trade.origin_port) +
-                                            self.calc_time_to_travel(vessel, trade.origin_port, trade.destination_port) +
-                                            self.calc_time_to_travel(vessel, trade.destination_port, right))
-                                gas_increase_travel = (self.cost_helper.calculate_travel_consumption(vessel, left, trade.origin_port, False) +
-                                                    self.cost_helper.calculate_travel_consumption(vessel, trade.destination_port, right, False) +
-                                                    self.cost_helper.calculate_travel_consumption(vessel, trade.origin_port, trade.destination_port, True) -
-                                                    self.cost_helper.calculate_travel_consumption(vessel, left, right, False))
+
+                            if right is not None:
+                                time_to_trade += self.calc_time_to_travel(vessel, trade.destination_port, right)
+                                gas_increase_travel += (self.cost_helper.calculate_travel_consumption(vessel, trade.destination_port, right, False) -
+                                                         self.cost_helper.calculate_travel_consumption(vessel, left, right, False))
+
                         else:
                             pickup_left: Port | None
                             pickup_right: Port | None
