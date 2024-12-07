@@ -1,15 +1,13 @@
-from dataclasses import dataclass
 from collections import deque
 from mable.shipping_market import Trade
 from mable.simulation_space import Location, Port, OnJourney
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine
-from typing import Any, Deque, NamedTuple, Optional, Tuple, Union
+from typing import Deque, NamedTuple, Optional, Tuple, Union
 
 from ScheduleGenerator.AbstractScheduleGenerator import AbstractScheduleGenerator
 from Util import get_schedule_as_deque, calc_fuel_to_travel, calc_time_to_travel
-
 
 
 class BruteScheduleGenerator(AbstractScheduleGenerator):
@@ -78,7 +76,6 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
         cost_increase: float
         outputed_vessel_schedule: Optional[Union[Schedule, deque[Location]]]
         
-    # TODO ALL BELOW
     def find_cheapest_schedule(
         self,
         schedule: Schedule,
@@ -106,15 +103,12 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
             for idx_drop_off in schedule.get_insertion_points()[i:]
         ]:
             try:
-                # Create copies of the schedule and current vessel schedule (so we can edit them)
+                # Create a copy of the schedule
                 schedule_option = schedule.copy()
-                current_vessel_schedule_option = current_vessel_schedule.copy()
 
                 # Add the trade to the schedule & ignore if the schedule is invalid
                 schedule_option.add_transportation(
                     trade, idx_pick_up, idx_drop_off)
-                self.temp_add_vessel_schedule_locations(
-                    trade, current_vessel_schedule_option, idx_pick_up, idx_drop_off)
                 if not schedule_option.verify_schedule():
                     continue
 
@@ -127,10 +121,10 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                 # Then calculate the gas increase and time to trade, differentiating between the same and different insertion points
                 if idx_drop_off == idx_pick_up:
                     gas_increase_travel, time_to_trade = self._calculate_for_same_insertion(
-                        schedule, vessel, idx_pick_up, current_vessel_schedule_option, trade, time_to_load)
+                        schedule, vessel, idx_pick_up, current_vessel_schedule, trade, time_to_load)
                 else:
-                    gas_increase_travel, time_to_trade = self._calculate_for_same_insertion(
-                        schedule, vessel, idx_pick_up, idx_drop_off, current_vessel_schedule_option, trade, time_to_load)
+                    gas_increase_travel, time_to_trade = self._calculate_for_different_insertion(
+                        schedule, vessel, idx_pick_up, idx_drop_off, current_vessel_schedule, trade, time_to_load)
 
                 # Calculate the cost increase based on the total fuel consumption
                 gas_increase_loading: float = vessel.get_loading_consumption(time_to_load)
@@ -146,7 +140,7 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                 # Now check if the new schedule is the cheapest, if so update the cheapest schedule
                 if cost_increase < cheapest_result.cost_increase:
                     cheapest_result = self.CheapestScheduleResult(
-                        schedule_option, cost_increase, current_vessel_schedule_option)
+                        schedule_option, cost_increase, current_vessel_schedule.copy())
 
             except Exception as e:
                 self.logger.error(f"Error in find_cheapest_schedule: {e}")
@@ -309,18 +303,3 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
             return schedule_locations[-1] if schedule_locations else vessel.location, None
         else:
             return schedule_locations[idx - 2], schedule_locations[idx - 1]
-
-    @staticmethod
-    def temp_add_vessel_schedule_locations(trade: Trade, current_vessel_schedule_option: deque, pickup_idx: int,
-                                           delivery_idx: int):
-        # self.logger.info(f"Adding trade {trade} to vessel {vessel.name} at pickup_idx={pickup_idx}, delivery_idx={delivery_idx}")
-
-        q = current_vessel_schedule_option
-
-        q.insert(2*(pickup_idx - 1), trade.origin_port)
-        q.insert(2*(pickup_idx - 1), trade.origin_port)
-
-        adjusted_delivery_idx = 2*(delivery_idx-1) + 2
-
-        q.insert(adjusted_delivery_idx, trade.destination_port)
-        q.insert(adjusted_delivery_idx, trade.destination_port)
