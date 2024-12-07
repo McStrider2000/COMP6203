@@ -7,3 +7,4 @@
 */logs.txt
 .DS_Store
 logs.txt
+__pycache__
