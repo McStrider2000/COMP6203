@@ -23,7 +23,7 @@ class TournamentConfig:
     
     def __post_init__(self):
         if self.trades_per_auction_range is None:
-            self.trades_per_auction_range = [5, 7, 10]
+            self.trades_per_auction_range = [1,3,5,7,10]
         if self.vessel_counts is None:
             self.vessel_counts = {
                 'suezmax': 1,
@@ -612,7 +612,7 @@ def main():
     # Configure tournament
     config = TournamentConfig(
         num_months=12,
-        trades_per_auction_range=[3,4],
+        trades_per_auction_range=[2,4,6,8,10],
         num_rounds=1,
         vessel_counts={'suezmax': 1, 'aframax': 1, 'vlcc': 1}
     )

@@ -1,6 +1,6 @@
 from collections import deque
 from mable.shipping_market import Trade
-from mable.simulation_space import Location, Port, OnJourney
+from mable.simulation_space.universe import Location, Port, OnJourney
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine
@@ -67,6 +67,8 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                 scheduled_trades.append(trade)
                 schedules[chosen_vessel] = best_result.vessel_schedule
                 costs[trade] = best_result.cost_increase
+            else:
+                print("no trade found")
 
         return ScheduleProposal(schedules, scheduled_trades, costs)
 

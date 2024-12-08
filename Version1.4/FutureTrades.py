@@ -4,7 +4,7 @@ from mable.cargo_bidding import TradingCompany
 from mable.competition.information import CompanyHeadquarters
 from mable.extensions.fuel_emissions import VesselWithEngine
 from mable.shipping_market import Trade
-from mable.simulation_space import Port
+from mable.simulation_space.universe import Port
 
 from CostEstimation import CostEstimator
 import MyCompany

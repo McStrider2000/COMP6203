@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 from mable.competition.information import CompanyHeadquarters
 from mable.shipping_market import Trade
 from mable.extensions.fuel_emissions import VesselWithEngine
-from mable.simulation_space import Location
+from mable.simulation_space.universe import Location
 from mable.transportation_scheduling import Schedule
 import logging
 

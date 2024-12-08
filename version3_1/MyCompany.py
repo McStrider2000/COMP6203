@@ -57,6 +57,13 @@ class MyCompany(TradingCompany):
         self.schedule_generator.inform(trades)
         self.opponent_simulation.inform(trades)
         self.bid_strategy.inform(trades)
+
+        for vessel in self.fleet:
+
+            self.logger.info(f"Clean schedules for vessel {vessel.name} is: {vessel.schedule.get_simple_schedule()}")
+            self.logger.info(f"Untidy schedule for vessel {vessel.name} is: {vessel.schedule._get_node_locations()}")
+            self.logger.info(f"Len Clean {len(vessel.schedule.get_simple_schedule())}")
+            self.logger.info(f"Len Untidy {len(vessel.schedule._get_node_locations())}")
         
         # Return the bids
         return self.bid_strategy.get_bids(trades)
@@ -73,6 +80,6 @@ class MyCompany(TradingCompany):
         self.schedule_generator.recieve(contracts, auction_ledger)
         self.opponent_simulation.recieve(contracts, auction_ledger)
         self.bid_strategy.recieve(contracts, auction_ledger)
-
+ 
     def propose_schedules(self, trades):
         return self.schedule_generator.generate(self, trades)

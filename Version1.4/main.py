@@ -14,11 +14,11 @@ class MostBasicCompany(TradingCompany):
         return []
 
 def build_specification():
-    num_suezmax = 1
-    num_aframax = 1
-    num_vlcc = 1
-    number_of_month = 12
-    trades_per_auction = 7
+    num_suezmax = 2
+    num_aframax = 2
+    num_vlcc = 2
+    number_of_month= 12
+    trades_per_auction = 9
     specifications_builder = environment.get_specification_builder(environment_files_path="../resources",
         trades_per_occurrence=trades_per_auction,
         num_auctions=number_of_month)
@@ -30,21 +30,21 @@ def build_specification():
     # fake_my_fleet = fleets.mixed_fleet(num_suezmax=1, num_aframax=1, num_vlcc=1)
     # specifications_builder.add_company(MyCompany.Data(MyCompany, fake_my_fleet, "Imposter Company"))
 
-    basic_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    specifications_builder.add_company(MostBasicCompany.Data(MostBasicCompany, basic_fleet, MostBasicCompany.__name__))
+    # basic_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
+    # specifications_builder.add_company(MostBasicCompany.Data(MostBasicCompany, basic_fleet, MostBasicCompany.__name__))
     arch_enemy_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
-    specifications_builder.add_company(
-        companies.MyArchEnemy.Data(
-            companies.MyArchEnemy, arch_enemy_fleet, "Arch Enemy Ltd.",
-            profit_factor=2.1))
+    # specifications_builder.add_company(
+    #     companies.MyArchEnemy.Data(
+    #         companies.MyArchEnemy, arch_enemy_fleet, "Arch Enemy Ltd.",
+    #         profit_factor=2.1))
     the_scheduler_fleet = fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc)
     for vessel in the_scheduler_fleet:
         vessel.name = "The Scheduler"+str(vessel.name)
         print("Vessel of the scheduler",vessel.name)
-    specifications_builder.add_company(
-        companies.TheScheduler.Data(
-            companies.TheScheduler, the_scheduler_fleet, "The Scheduler LP",
-            profit_factor=2.5))
+    # specifications_builder.add_company(
+    #     companies.TheScheduler.Data(
+    #         companies.TheScheduler, the_scheduler_fleet, "The Scheduler LP",
+    #         profit_factor=2.5))
     sim = environment.generate_simulation(
         specifications_builder,
         show_detailed_auction_outcome=True,

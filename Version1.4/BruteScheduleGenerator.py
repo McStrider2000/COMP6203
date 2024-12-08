@@ -5,7 +5,7 @@ from logging import Logger
 from mable.extensions.world_ports import LatLongPort
 from mable.shipping_market import Trade
 from mable.cargo_bidding import TradingCompany
-from mable.simulation_space import Location, Port, OnJourney
+from mable.simulation_space.universe import Location, Port, OnJourney
 from mable.transport_operation import ScheduleProposal
 from mable.transportation_scheduling import Schedule
 from mable.extensions.fuel_emissions import VesselWithEngine

@@ -15,12 +15,12 @@ def build_specification(
     # Environment parameters
     environment_files_path="../resources",
     # Auction parameters
-    number_of_month: int = 12,
-    trades_per_auction: int = 7,
+    number_of_month: int = 1,
+    trades_per_auction: int = 12,
     # Number of vessels
-    num_suezmax: int = 1,
-    num_aframax: int = 1,
-    num_vlcc: int = 1,
+    num_suezmax: int = 2,
+    num_aframax: int = 2,
+    num_vlcc: int = 2,
     # Simulation parameters
     show_detailed_auction_outcome: bool = True,
     global_agent_timeout: int = 60,
@@ -41,24 +41,24 @@ def build_specification(
         fleet=fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc), 
         name=MostBasicCompany.__name__
     )
-    arch_enemy_company = companies.MyArchEnemy.Data(
-        current_class=companies.MyArchEnemy,
-        fleet=fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc),
-        name="Arch Enemy Ltd.",
-        profit_factor=2.1
-    )
-    the_scheduler_company = companies.TheScheduler.Data(
-        current_class=companies.TheScheduler,
-        fleet=fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc),
-        name="The Scheduler LP",
-        profit_factor=2.5
-    )
+    # arch_enemy_company = companies.MyArchEnemy.Data(
+    #     current_class=companies.MyArchEnemy,
+    #     fleet=fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc),
+    #     name="Arch Enemy Ltd.",
+    #     profit_factor=2.1
+    # )
+    # the_scheduler_company = companies.TheScheduler.Data(
+    #     current_class=companies.TheScheduler,
+    #     fleet=fleets.mixed_fleet(num_suezmax=num_suezmax, num_aframax=num_aframax, num_vlcc=num_vlcc),
+    #     name="The Scheduler LP",
+    #     profit_factor=2.5
+    # )
 
     # Add the companies to the simulation
     specifications_builder.add_company(my_company)
     specifications_builder.add_company(basic_company)
-    specifications_builder.add_company(arch_enemy_company)
-    specifications_builder.add_company(the_scheduler_company)
+    # specifications_builder.add_company(arch_enemy_company)
+    # specifications_builder.add_company(the_scheduler_company)
 
     # Generate the simulation
     sim = environment.generate_simulation(
