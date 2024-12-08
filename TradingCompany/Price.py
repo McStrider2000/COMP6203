@@ -39,7 +39,7 @@ class BidPredictor():
         self.headquarters = headquarters
         self.time_till_next_auction = time - self.time_till_next_auction
 
-    def recieve(self, headquarter: CompanyHeadquarters, auction_ledger: AuctionLedger = None) -> None:
+    def receive(self, headquarter: CompanyHeadquarters, auction_ledger: AuctionLedger = None) -> None:
         def find_closest_distance(vessels: List[VesselWithEngine], contract: Contract) -> VesselWithEngine:
             distance = float('inf')
             for vessel in headquarter.fleet:

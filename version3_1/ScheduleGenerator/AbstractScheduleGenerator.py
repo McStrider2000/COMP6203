@@ -24,5 +24,5 @@ class AbstractScheduleGenerator(ABC):
         pass 
     def inform(self, trades: List[Trade]) -> None:
         pass
-    def recieve(self, contract: List[Contract], auction_ledger: AuctionLedger) -> None:
+    def receive(self, contract: List[Contract], auction_ledger: AuctionLedger) -> None:
         pass 

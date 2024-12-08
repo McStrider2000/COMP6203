@@ -18,6 +18,8 @@ from FutureTrades import FutureTradesHelper
 from OpponentTracker import OpponentTracker
 import collections
 
+from ModifiedGeneticScheduler import ModifiedGeneticScheduler
+
 class MyCompany(TradingCompany):
     logger: Logger
     vessel_schedule_locations: dict[VesselWithEngine, deque[Any]]
@@ -67,6 +69,10 @@ class MyCompany(TradingCompany):
         self.future_trades = trades
 
     def inform(self, trades: List[Trade], *args, **kwargs):
+        mod_gen = ModifiedGeneticScheduler()
+        mod_gen.generate_population(trades, self.fleet, self.headquarters)
+        exit(9)
+
         self.remove_vessel_schedule_locations()
         self.log_fleet()
 

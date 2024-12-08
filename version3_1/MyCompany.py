@@ -68,7 +68,7 @@ class MyCompany(TradingCompany):
         # Return the bids
         return self.bid_strategy.get_bids(trades)
     
-    def recieve(self, contracts: List[Contract], auction_ledger: AuctionLedger):
+    def receive(self, contracts, auction_ledger=None, *args, **kwargs):
         # Internal update
         proposal = self.propose_schedules([contract.trade for contract in contracts])
         
@@ -77,9 +77,9 @@ class MyCompany(TradingCompany):
             self.logger.error(f"Rejected trades: {rejected_trades}")
 
         # Inform extensions
-        self.schedule_generator.recieve(contracts, auction_ledger)
-        self.opponent_simulation.recieve(contracts, auction_ledger)
-        self.bid_strategy.recieve(contracts, auction_ledger)
+        self.schedule_generator.receive(contracts, auction_ledger)
+        self.opponent_simulation.receive(contracts, auction_ledger)
+        self.bid_strategy.receive(contracts, auction_ledger)
  
     def propose_schedules(self, trades):
         return self.schedule_generator.generate(self, trades)

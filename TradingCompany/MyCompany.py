@@ -32,7 +32,7 @@ class MyCompany(TradingCompany):
         scheduling_proposal = self.find_schedules(trades)
         rejected_trades = self.apply_schedules(scheduling_proposal.schedules)
 
-        self._bid_predictor.recieve(contracts, auction_ledger)
+        self._bid_predictor.receive(contracts, auction_ledger)
 
     def find_schedules(self, trades):
         scheduleProposal = self.propose_schedules(trades)
