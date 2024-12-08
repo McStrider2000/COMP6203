@@ -12,6 +12,7 @@ from pathlib import Path
 import subprocess
 from collections import defaultdict
 from prettytable import PrettyTable
+import numpy as np
 
 @dataclass
 class TournamentConfig:
@@ -46,20 +47,23 @@ class Tournament:
         self.logger.setLevel(logging.INFO)
         
     def process_simulation_results(self, metrics: Dict) -> Dict[str, Dict[str, float]]:
-        """Process a single simulation's results into detailed company statistics.
-        
-        Args:
-            metrics (Dict): Raw metrics data from simulation output
-            
-        Returns:
-            Dict[str, Dict[str, float]]: Processed statistics for each company
-        """
         company_stats = {}
         
         try:
             # Process each company's metrics
             for company_key in metrics["company_metrics"]:
+                #"0": "MyCompany",
                 company_name = metrics["company_names"].get(company_key, f"Unknown_Company_{company_key}")
+                #                 "0": {
+                #     "fuel_consumption": 222621.50044690608,
+                #     "co2_emissions": 703483.941412223,
+                #     "fuel_cost": 222621.50044690608,
+                #     "vessel_status_ballast": 7378.252857142848,
+                #     "vessel_status_loading": 41.41456414784511,
+                #     "vessel_status_laden": 4630.8042857143155,
+                #     "vessel_status_unloading": 41.41456414784511,
+                #     "vessel_status_idle": 608626.3668061309
+                # },
                 company_metrics = metrics["company_metrics"][company_key]
                 
                 # Extract vessel status metrics
@@ -274,37 +278,107 @@ class Tournament:
             return None
 
     def _plot_financial_metrics(self, df: pd.DataFrame):
-        """Create financial metrics visualization."""
+        """Create financial metrics visualization with grouped bar chart for profits."""
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(20, 12))
         
-        # Plot 1: Total Profit by Company
-        sns.boxplot(data=df, x='company', y='total_profit', ax=ax1)
-        ax1.set_title('Total Profit Distribution')
+        # Define consistent colors for each company
+        company_colors = {
+            company: color 
+            for company, color in zip(
+                df['company'].unique(), 
+                ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']  # Using default matplotlib colors
+            )
+        }
+        
+        # Plot 1: Total Profit by Company and Trades per Auction
+        # First, calculate the mean profit for each company and trades_per_auction combination
+        profit_data = df.groupby(['trades_per_auction', 'company'])['total_profit'].mean().reset_index()
+        
+        # Get unique values for positioning
+        trades_values = sorted(df['trades_per_auction'].unique())
+        companies = df['company'].unique()
+        n_companies = len(companies)
+        
+        # Calculate bar positions
+        bar_width = 0.8 / n_companies
+        
+        # Plot bars for each company
+        for i, company in enumerate(companies):
+            company_data = profit_data[profit_data['company'] == company]
+            x_positions = np.arange(len(trades_values)) + (i - n_companies/2 + 0.5) * bar_width
+            
+            ax1.bar(x_positions, 
+                company_data['total_profit'],
+                width=bar_width,
+                label=company,
+                color=company_colors[company])
+        
+        # Customize the plot
+        ax1.set_xticks(np.arange(len(trades_values)))
+        ax1.set_xticklabels([f'{t} trades' for t in trades_values])
+        ax1.set_title('Total Profit by Company and Trades per Auction')
+        ax1.set_xlabel('Trades per Auction')
+        ax1.set_ylabel('Total Profit')
+        ax1.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         ax1.tick_params(axis='x', rotation=45)
         
+        # Add value labels on top of bars
+        for container in ax1.containers:
+            ax1.bar_label(container, fmt='%.0f', padding=3, rotation=0)
+        
         # Plot 2: Revenue Breakdown
-        # Using the correct column names that exist in the DataFrame
         financial_metrics = ['revenue', 'operational_costs', 'penalty']
         df_melted = pd.melt(df, 
-                        id_vars=['company'],
-                        value_vars=financial_metrics,
-                        var_name='metric', value_name='value')
+                            id_vars=['company'],
+                            value_vars=financial_metrics,
+                            var_name='metric', value_name='value')
         sns.barplot(data=df_melted, x='company', y='value', hue='metric', ax=ax2)
         ax2.set_title('Financial Breakdown by Company')
         ax2.tick_params(axis='x', rotation=45)
         
         # Plot 3: Profit Margins
-        sns.boxplot(data=df, x='company', y='profit_margin', ax=ax3)
-        ax3.set_title('Profit Margins by Company')
+        # Plot 3: Financial Metrics by Trades per Auction (New grouped bar chart)
+        metrics_data = df.groupby(['trades_per_auction', 'company'])[financial_metrics].mean().reset_index()
+        
+        # Calculate x positions for each group
+        x_base = np.arange(len(trades_values))
+        total_width = 0.8
+        company_width = total_width / n_companies
+        metric_width = company_width / len(financial_metrics)
+        
+        for i, company in enumerate(companies):
+            company_metrics = metrics_data[metrics_data['company'] == company]
+            
+            for j, metric in enumerate(financial_metrics):
+                x_pos = x_base + (i - n_companies/2 + 0.5) * company_width + (j - len(financial_metrics)/2 + 0.5) * metric_width
+                bars = ax3.bar(x_pos,
+                            company_metrics[metric],
+                            width=metric_width,
+                            label=f'{company} - {metric}',
+                            color=plt.cm.Set3(i * 3 + j))  # Using different color scheme for better distinction
+                
+                # Only add bar labels for the larger values to avoid clutter
+                if metric == 'operational_costs':
+                    ax3.bar_label(bars, fmt='%.0f', padding=3, rotation=90, size=8)
+                if metric == 'revenue':
+                    ax3.bar_label(bars, fmt='%.0f', padding=3, rotation=90, size=8)
+        
+        ax3.set_xticks(x_base)
+        ax3.set_xticklabels([f'{t} trades' for t in trades_values])
+        ax3.set_title('Financial Metrics by Company and Trades per Auction')
+        ax3.set_xlabel('Trades per Auction')
+        ax3.set_ylabel('Value')
+        ax3.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
         ax3.tick_params(axis='x', rotation=45)
         
         # Plot 4: Cost per Unit Cargo
         sns.scatterplot(data=df, x='total_cargo_volume', y='cost_per_unit_cargo', 
-                    hue='company', size='trades_won', ax=ax4)
+                        hue='company', size='trades_won', ax=ax4)
         ax4.set_title('Cost Efficiency vs Cargo Volume')
         
+        # Adjust layout to prevent overlap
         plt.tight_layout()
-        plt.savefig('financial_metrics.png')
+        plt.savefig('financial_metrics.png', bbox_inches='tight')
         plt.close()
 
     def _plot_operational_metrics(self, df: pd.DataFrame):
@@ -367,19 +441,28 @@ class Tournament:
         plt.close()
 
     def _plot_vessel_utilization(self, df: pd.DataFrame):
-        """Create vessel utilization visualization."""
+        """Create vessel utilization visualization with three plots."""
+        fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(24, 8))
+        
         vessel_states = ['laden', 'ballast', 'loading', 'unloading', 'idle']
         
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(20, 8))
+        # Define consistent colors for each company
+        company_colors = {
+            company: color 
+            for company, color in zip(
+                df['company'].unique(), 
+                ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd']
+            )
+        }
         
-        # Plot 1: Vessel State Distribution
+        # Plot 1: Original Vessel State Distribution
         df_melted = pd.melt(df, 
                             id_vars=['company'],
                             value_vars=vessel_states,
                             var_name='state', value_name='percentage')
         sns.boxplot(data=df_melted, x='company', y='percentage', 
                     hue='state', ax=ax1)
-        ax1.set_title('Vessel State Distribution')
+        ax1.set_title('Overall Vessel State Distribution')
         ax1.tick_params(axis='x', rotation=45)
         
         # Plot 2: Active vs Idle Time
@@ -394,8 +477,51 @@ class Tournament:
         ax2.set_title('Active vs Idle Time')
         ax2.tick_params(axis='x', rotation=45)
         
+        # Plot 3: Vessel States by Trades per Auction (New grouped bar chart)
+        states_data = df.groupby(['trades_per_auction', 'company'])[vessel_states].mean().reset_index()
+        trades_values = sorted(df['trades_per_auction'].unique())
+        companies = df['company'].unique()
+        n_companies = len(companies)
+        
+        # Calculate bar positions
+        x_base = np.arange(len(trades_values))
+        total_width = 0.8
+        company_width = total_width / n_companies
+        state_width = company_width / len(vessel_states)
+        
+        # Create color map for vessel states
+        state_colors = plt.cm.Set3(np.linspace(0, 1, len(vessel_states)))
+        state_color_dict = dict(zip(vessel_states, state_colors))
+        
+        # Plot bars for each company and state
+        for i, company in enumerate(companies):
+            company_data = states_data[states_data['company'] == company]
+            
+            for j, state in enumerate(vessel_states):
+                x_pos = x_base + (i - n_companies/2 + 0.5) * company_width + (j - len(vessel_states)/2 + 0.5) * state_width
+                
+                bars = ax3.bar(x_pos,
+                            company_data[state],
+                            width=state_width,
+                            label=f'{company} - {state}',
+                            color=state_color_dict[state],
+                            alpha=0.7)
+                
+                # Add value labels for the bars
+                ax3.bar_label(bars, fmt='%.1f%%', padding=3, rotation=90, size=8)
+        
+        # Customize the third plot
+        ax3.set_xticks(x_base)
+        ax3.set_xticklabels([f'{t} trades' for t in trades_values])
+        ax3.set_title('Vessel States by Company and Trades per Auction')
+        ax3.set_xlabel('Trades per Auction')
+        ax3.set_ylabel('Percentage')
+        ax3.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize='small')
+        ax3.tick_params(axis='x', rotation=45)
+        
+        # Adjust layout to prevent overlap
         plt.tight_layout()
-        plt.savefig('vessel_utilization.png')
+        plt.savefig('vessel_utilization.png', bbox_inches='tight', dpi=300)
         plt.close()
 
     # Also fix the correlations warning
@@ -414,11 +540,11 @@ class Tournament:
         summary = df.groupby('company')[available_metrics].agg(['mean', 'std', 'min', 'max'])
         summary.to_csv('detailed_summary.csv')
         
-        # Fix the correlation analysis to avoid the deprecation warning
-        correlations = df.groupby('company', group_keys=False).apply(
-            lambda x: x[available_metrics].corr()
-        )
-        correlations.to_csv('metric_correlations.csv')
+        # # Fix the correlation analysis to avoid the deprecation warning
+        # correlations = df.groupby('company', group_keys=False).apply(
+        #     lambda x: x[available_metrics].corr()
+        # )
+        # correlations.to_csv('metric_correlations.csv')
 
     def _create_summary(self, df: pd.DataFrame) -> pd.DataFrame:
         """Create and display summary tables for each company."""
@@ -486,7 +612,7 @@ def main():
     # Configure tournament
     config = TournamentConfig(
         num_months=12,
-        trades_per_auction_range=[5],
+        trades_per_auction_range=[3,4],
         num_rounds=1,
         vessel_counts={'suezmax': 1, 'aframax': 1, 'vlcc': 1}
     )
