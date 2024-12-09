@@ -140,6 +140,13 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                         vessel.get_idle_consumption(overall_time_increase - time_to_trade)))
 
                 # Now check if the new schedule is the cheapest, if so update the cheapest schedule
+                if cost_increase<0:
+                    print("NEGATIVE COST INCREASE")
+                    print("Cost increae ",cost_increase)
+                    print("Gas Increase ",gas_increase_travel)
+                    print("Time to trade ",time_to_trade)
+                    print(trade)
+                    print("For vessel ", vessel.name," with shceudle ",vessel.schedule.get_simple_schedule)
                 if cost_increase < cheapest_result.cost_increase:
                     cheapest_result = self.CheapestScheduleResult(
                         schedule_option, cost_increase, current_vessel_schedule.copy())
@@ -174,12 +181,12 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                          calc_time_to_travel(self.company.headquarters, vessel, left, trade.origin_port) +
                          calc_time_to_travel(self.company.headquarters, vessel, trade.origin_port,
                                                   trade.destination_port))
-        gas_increase_travel = (calc_fuel_to_travel(self.company.headquarters, vessel, left, trade.origin_port, False) +
+        gas_increase_travel = (calc_fuel_to_travel(self.company.headquarters, vessel, left, trade.origin_port, True) +
                                calc_fuel_to_travel(self.company.headquarters, vessel, trade.origin_port, trade.destination_port, True))
 
         if right is not None:
             time_to_trade += calc_time_to_travel(self.company.headquarters, vessel, trade.destination_port, right)
-            gas_increase_travel += (calc_fuel_to_travel(self.company.headquarters, vessel, trade.destination_port, right, False) -
+            gas_increase_travel += (calc_fuel_to_travel(self.company.headquarters, vessel, trade.destination_port, right, True) -
                                     calc_fuel_to_travel(self.company.headquarters, vessel, left, right, False))
         
         return gas_increase_travel, time_to_trade
@@ -196,8 +203,6 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
     ) -> Tuple[float, float]:
         pickup_left, pickup_right, dropoff_left, dropoff_right = self._get_ports_around_different_insertion(schedule, vessel, idx_pick_up, idx_drop_off,current_vessel_schedule)
                             
-        # Calculate time components with None checks
-        time_to_load : float = vessel.get_loading_time(trade.cargo_type, trade.amount)
         time_to_trade = time_to_load + time_to_load  # Loading and unloading times
                             
         # Add pickup times
@@ -218,7 +223,7 @@ class BruteScheduleGenerator(AbstractScheduleGenerator):
                             
         if pickup_right is not None:
             gas_increase_travel += calc_fuel_to_travel(self.company.headquarters, vessel, trade.origin_port, pickup_right, True)
-            gas_increase_travel -= calc_fuel_to_travel(self.company.headquarters, vessel, pickup_left, pickup_right, True)
+            gas_increase_travel -= calc_fuel_to_travel(self.company.headquarters, vessel, pickup_left, pickup_right, False)
                                 
         if dropoff_right is not None:
             gas_increase_travel += (
