@@ -1,7 +1,8 @@
 import random
+import statistics
 import sys
 from collections import deque
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from mable.competition.information import CompanyHeadquarters
 from mable.extensions.fuel_emissions import VesselWithEngine
@@ -14,8 +15,165 @@ from pyparsing import empty
 
 from version3_1.Util import LOGGER
 
-
 class ModifiedGeneticScheduler:
+
+    def generate_schedules(self, trades, ships, headquarters):
+        population = self.generate_population(trades, ships, headquarters)
+        fitness_scores = self.assess_population_fitness(population, headquarters)
+        filtered_population, filtered_scores = self.create_temp_population(population, fitness_scores)
+        self.select_edges(filtered_population, filtered_scores, headquarters)
+
+    def generate_population(self, trades : list[Trade], ships : list[VesselWithEngine], headquarters : CompanyHeadquarters, population_size=20):
+        population = []
+        for _ in range(population_size):
+            new_schedules, assigned_trades, unassigned_trades = self.generate_chromosome(trades, ships, headquarters)
+            population.append({
+                "new_schedules": new_schedules,
+                "assigned_trades": assigned_trades,
+                "unassigned_trades": unassigned_trades
+            })
+
+        return population
+
+    @staticmethod
+    def generate_chromosome(trades, ships, hq):
+        shuffled_trades = trades
+        random.shuffle(trades)
+        assigned_trades = []
+        unassigned_trades = []
+        new_schedules = {ship: ship.schedule.copy() for ship in ships}
+        for trade in shuffled_trades:
+            assigned = False
+
+            random.shuffle(ships)
+            for ship in ships:
+                if assigned:
+                    break
+
+                insertion_points = list(new_schedules[ship].get_insertion_points())
+
+                if len(insertion_points) == 1:
+                    temp_schedule = new_schedules[ship].copy()
+                    temp_schedule.add_transportation(trade, insertion_points[0], insertion_points[0])
+                    if temp_schedule.verify_schedule():
+                        new_schedules[ship] = temp_schedule
+                        assigned_trades.append(trade)
+                        assigned = True
+                        break
+                else:
+                    random.shuffle(insertion_points)
+                    for pickup_option in insertion_points:
+                        possible_dropoffs = [dropoff for dropoff in insertion_points if dropoff >= pickup_option]
+                        random.shuffle(possible_dropoffs)
+
+                        for dropoff_option in possible_dropoffs:
+                            if dropoff_option >= pickup_option:
+                                temp_schedule = new_schedules[ship].copy()
+                                temp_schedule.add_transportation(trade, pickup_option, dropoff_option)
+                                if temp_schedule.verify_schedule():
+                                    new_schedules[ship] = temp_schedule
+                                    assigned_trades.append(trade)
+                                    assigned = True
+                                    break
+
+                        if assigned:
+                            break
+
+            if not assigned:
+                unassigned_trades.append(trade)
+
+        return new_schedules, assigned_trades, unassigned_trades
+
+    def assess_population_fitness(self, population, headquarters, penalty = 250):
+        fitness_scores = []
+        for solution in population:
+            travel_only_time = 0.0
+            total_time = 0.0
+            for ship, schedule in solution["new_schedules"].items():
+                travel_only_time += self.calculate_schedule_travel_time(ship, schedule, headquarters)
+                total_time += schedule.completion_time()
+
+            missing_trades = len(solution["unassigned_trades"])
+            penalty_score = penalty * missing_trades
+            fitness_scores.append({
+                "overall_score" : total_time + penalty_score,
+                "travel_score" : travel_only_time
+            })
+
+        return fitness_scores
+
+    def calculate_schedule_travel_time(self, ship, schedule, headquarters):
+        distance = 0.0
+        ports = schedule.get_simple_schedule()
+        for i in range(len(ports) - 1):
+            port_1 = self.retrieve_port(*ports[i])
+            port_2 = self.retrieve_port(*ports[i + 1])
+            distance += headquarters.get_network_distance(port_1, port_2)
+
+        return ship.get_travel_time(distance)
+
+    @staticmethod
+    def create_temp_population(population, fitness_scores):
+        average_fitness = statistics.mean([score['overall_score'] for score in fitness_scores])
+
+        temp_population = []
+        temp_scores = []
+        for i in range(len(population)):
+            if fitness_scores[i]['overall_score'] <= average_fitness:
+                temp_population.append(population[i])
+                temp_scores.append(fitness_scores[i])
+
+        return temp_population, temp_scores
+
+    def select_edges(self, population, fitness_scores, headquarters):
+        new_population = []
+
+        overall_scores = [fs['overall_score'] for fs in fitness_scores]
+        min_score_idx = overall_scores.index(min(overall_scores))
+        min_chromosome = population[min_score_idx]
+
+        for chromosome, fitness in zip(population, fitness_scores):
+            schedules = chromosome["new_schedules"]
+            ships = list(schedules.keys())
+            random.shuffle(ships)
+
+            r_values = []
+            selected_edges = 0
+
+            for ship in ships:
+                if selected_edges >= 3:
+                    break
+
+                schedule = schedules[ship]
+                ports = schedule.get_simple_schedule()
+
+                if len(ports) < 2:  # No edges to select if fewer than 2 ports
+                    continue
+
+                edge_index = random.randrange(len(ports) - 1)
+                port_1 = self.retrieve_port(*ports[edge_index])
+                port_2 = self.retrieve_port(*ports[edge_index + 1])
+
+                distance = headquarters.get_network_distance(port_1, port_2)
+                edge_cost = ship.get_travel_time(distance)
+
+                travel_cost = fitness['travel_score']
+                r_values.append(edge_cost / travel_cost)
+
+                selected_edges += 1
+
+            R = random.uniform(0, 1)
+            if len([r for r in r_values if r <= R]) >= 2:
+                new_population.append(chromosome)
+            else:
+                new_population.append(min_chromosome)
+
+        return new_population
+
+
+    @staticmethod
+    def retrieve_port(visit_type, trade):
+        return trade.origin_port if visit_type == "PICK_UP" else trade.destination_port
 
     @staticmethod
     def assign_trades_to_ships_randomly(trades: list[Trade], ships: list[VesselWithEngine]):
@@ -32,7 +190,8 @@ class ModifiedGeneticScheduler:
 
         return ship_trade_map
 
-    def generate_chromosome(self, trades : list[Trade], vessel_schedule : Schedule, headquarters : CompanyHeadquarters):
+    def generate_ship_allocation(self, trades: list[Trade], vessel_schedule: Schedule,
+                                 headquarters: CompanyHeadquarters):
         shuffled_trades = random.sample(trades, len(trades))
         schedule_distance = 0
         for trade in shuffled_trades:
@@ -42,28 +201,6 @@ class ModifiedGeneticScheduler:
 
         print(schedule_distance)
         return vessel_schedule
-
-
-    def generate_population(self, trades : list[Trade], ships : list[VesselWithEngine], headquarters : CompanyHeadquarters, population_size=10):
-        population = []
-        for _ in range(population_size):
-            ship_trade_map = self.assign_trades_to_ships_randomly(trades, ships)
-
-            solution = []
-            unassigned_trades = []
-            for ship in ships:
-                if len(unassigned_trades) > 0:
-                    ship_trade_map[ship].extend(unassigned_trades)
-
-                chromosome = self.generate_chromosome(ship_trade_map[ship], ship.schedule.copy(), headquarters)
-                solution.append(chromosome)
-
-                if len(ship_trade_map[ship]) > 0:
-                    unassigned_trades = ship_trade_map[ship]
-
-            population.append(solution)
-
-        return population
 
     @staticmethod
     def temp_add_vessel_schedule_locations(trade: Trade, current_vessel_schedule_option: deque, pickup_idx: int,

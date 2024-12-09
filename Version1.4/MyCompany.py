@@ -70,8 +70,9 @@ class MyCompany(TradingCompany):
 
     def inform(self, trades: List[Trade], *args, **kwargs):
         mod_gen = ModifiedGeneticScheduler()
-        mod_gen.generate_population(trades, self.fleet, self.headquarters)
-        exit(9)
+        mod_gen.generate_schedules(trades, self.fleet, self.headquarters)
+        exit()
+
 
         self.remove_vessel_schedule_locations()
         self.log_fleet()
